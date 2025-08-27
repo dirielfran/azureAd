@@ -1,0 +1,23 @@
+<div class="app-container">
+  <header class="app-header">
+    <h1>Aplicación Angular con Microsoft Entra ID</h1>
+    <nav class="app-nav">
+      <div class="nav-links">
+        <a routerLink="/protected-data" routerLinkActive="active">Datos Protegidos</a>
+      </div>
+      <div class="auth-controls">
+        <button *ngIf="!isLoggedIn" (click)="login()" class="btn btn-primary">
+          Iniciar sesión con Microsoft
+        </button>
+        <div *ngIf="isLoggedIn" class="user-info">
+          <span>¡Sesión iniciada!</span>
+          <button (click)="logout()" class="btn btn-secondary">Cerrar sesión</button>
+        </div>
+      </div>
+    </nav>
+  </header>
+  
+  <main class="app-main">
+    <router-outlet></router-outlet>
+  </main>
+</div>

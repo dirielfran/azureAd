@@ -1,0 +1,121 @@
+# See http://help.github.com/ignore-files/ for more about ignoring files.
+
+# Dependencias de Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Archivos de distribución de Angular
+dist/
+tmp/
+out-tsc/
+bazel-out/
+
+# Archivos de compilación de Angular
+*.tsbuildinfo
+
+# Archivos de caché
+.sass-cache/
+connect.lock
+coverage/
+libpeerconnection.log
+testem.log
+typings/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# IDEs y editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Archivos de configuración local
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+logs/
+*.log
+
+# Archivos de Java
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+
+# Directorios de compilación de Java/Maven
+target/
+build/
+bin/
+out/
+
+# Archivos de Gradle
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+!gradle-wrapper.properties
+
+# Archivos de configuración de IDE para Java
+.project
+.classpath
+.settings/
+*.iml
+*.ipr
+*.iws
+
+# Archivos temporales de Java
+*.tmp
+*.bak
+*.swp
+*~.nib
+
+# Archivos de Spring Boot
+spring.log
+
+# Archivos de base de datos H2
+*.db
+*.trace.db
+*.lock.db
+
+# Archivos de Maven
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Archivos específicos de Angular
+# Angular CLI
+.angular/
+.ng_build/
+.ng_pkg_build/
+
+# Archivos de pruebas
+*.tgz
+*.tar.gz
+
+# Archivos de configuración de ESLint
+.eslintcache
+
+# Archivos de Storybook
+storybook-static/
+
+# Archivos de Cypress
+cypress/videos/
+cypress/screenshots/
+
+# Archivos de
