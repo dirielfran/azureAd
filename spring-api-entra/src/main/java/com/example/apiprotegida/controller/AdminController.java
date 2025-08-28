@@ -1,5 +1,6 @@
 package com.example.apiprotegida.controller;
 
+import com.example.apiprotegida.security.RoleAnnotations;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -21,6 +22,7 @@ public class AdminController {
      * Obtiene información detallada del usuario actual para configuración
      */
     @GetMapping("/user-details")
+    @RoleAnnotations.AnyValidRole
     public ResponseEntity<Map<String, Object>> getCurrentUserDetails() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         
@@ -71,6 +73,7 @@ public class AdminController {
      * Endpoint para probar diferentes niveles de acceso
      */
     @GetMapping("/test-admin")
+    @RoleAnnotations.AdminOnly
     public ResponseEntity<Map<String, Object>> testAdminAccess() {
         return ResponseEntity.ok(Map.of(
             "message", "✅ Acceso de ADMINISTRADOR concedido",
@@ -80,6 +83,7 @@ public class AdminController {
     }
 
     @GetMapping("/test-manager") 
+    @RoleAnnotations.AdminOrManager
     public ResponseEntity<Map<String, Object>> testManagerAccess() {
         return ResponseEntity.ok(Map.of(
             "message", "✅ Acceso de GESTOR concedido",
@@ -89,6 +93,7 @@ public class AdminController {
     }
 
     @GetMapping("/test-user")
+    @RoleAnnotations.AnyValidRole
     public ResponseEntity<Map<String, Object>> testUserAccess() {
         return ResponseEntity.ok(Map.of(
             "message", "✅ Acceso de USUARIO concedido", 

@@ -1,5 +1,6 @@
 package com.example.apiprotegida.controller;
 
+import com.example.apiprotegida.security.RoleAnnotations;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -47,6 +48,7 @@ public class AuthController {
      * @return Información del usuario desde el token JWT
      */
     @GetMapping("/user-info")
+    @RoleAnnotations.AnyValidRole
     public ResponseEntity<Map<String, Object>> getUserInfo() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         

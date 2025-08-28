@@ -3,6 +3,7 @@ package com.example.apiprotegida.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -28,6 +29,7 @@ import java.util.Arrays;
  */
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
     @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
@@ -61,29 +63,8 @@ public class SecurityConfig {
                     "/auth/info"
                 ).permitAll()
                 
-                // Endpoints de autenticación - requieren cualquier rol válido
-                .requestMatchers("/auth/user-info", "/auth/test", "/auth/token-claims").hasAnyRole("ADMIN", "MANAGER", "USER", "READER")
-                
-                // Endpoints de datos - acceso por jerarquía
-                .requestMatchers("/data/admin/**").hasRole("ADMIN")
-                .requestMatchers("/data/manager/**").hasAnyRole("ADMIN", "MANAGER") 
-                .requestMatchers("/data/**").hasAnyRole("ADMIN", "MANAGER", "USER", "READER")
-                
-                // Endpoints de usuarios - acceso por jerarquía
-                .requestMatchers("/users/admin/**").hasRole("ADMIN")
-                .requestMatchers("/users/manage/**").hasAnyRole("ADMIN", "MANAGER")
-                .requestMatchers("/users/**").hasAnyRole("ADMIN", "MANAGER", "USER", "READER")
-                
-                // Endpoints de perfil - todos los usuarios autenticados
-                .requestMatchers("/profile/**").hasAnyRole("ADMIN", "MANAGER", "USER", "READER")
-                
-                // Endpoints de administración - acceso por jerarquía
-                .requestMatchers("/admin/user-details").hasAnyRole("ADMIN", "MANAGER", "USER", "READER") // Todos pueden ver sus detalles
-                .requestMatchers("/admin/test-admin").hasRole("ADMIN")
-                .requestMatchers("/admin/test-manager").hasAnyRole("ADMIN", "MANAGER")
-                .requestMatchers("/admin/test-user").hasAnyRole("ADMIN", "MANAGER", "USER", "READER")
-                
-                // Cualquier otro endpoint requiere autenticación
+                // Todos los demás endpoints requieren autenticación
+                // La autorización específica se maneja con @PreAuthorize en cada método
                 .anyRequest().authenticated()
             )
             

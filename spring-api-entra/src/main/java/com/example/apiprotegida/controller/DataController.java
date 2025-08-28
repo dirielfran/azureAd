@@ -1,5 +1,6 @@
 package com.example.apiprotegida.controller;
 
+import com.example.apiprotegida.security.RoleAnnotations;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -18,7 +19,6 @@ import java.util.*;
 @RestController
 @RequestMapping("/data")
 @CrossOrigin(origins = {"http://localhost:4200", "https://localhost:4200"})
-@PreAuthorize("hasAuthority('SCOPE_access_as_user')")
 public class DataController {
 
     /**
@@ -27,6 +27,7 @@ public class DataController {
      * @return Datos de ejemplo
      */
     @GetMapping
+    @RoleAnnotations.ValidScopeAndRole
     public ResponseEntity<Map<String, Object>> getData(Authentication authentication) {
         Map<String, Object> data = new HashMap<>();
         
@@ -55,6 +56,7 @@ public class DataController {
      * @return Datos para un dashboard
      */
     @GetMapping("/dashboard")
+    @RoleAnnotations.AdminManagerOrUser
     public ResponseEntity<Map<String, Object>> getDashboardData() {
         Map<String, Object> dashboard = new HashMap<>();
         
@@ -119,6 +121,7 @@ public class DataController {
      * @return Confirmación de creación
      */
     @PostMapping
+    @RoleAnnotations.AdminOrManager
     public ResponseEntity<Map<String, Object>> createData(@RequestBody Map<String, Object> datos) {
         Map<String, Object> response = new HashMap<>();
         
@@ -228,5 +231,117 @@ public class DataController {
         ));
         
         return ResponseEntity.ok(health);
+    }
+
+    // ===============================================
+    // ENDPOINTS CON AUTORIZACIÓN ESPECÍFICA POR ROL
+    // ===============================================
+
+    /**
+     * Endpoint administrativo - solo para ADMIN
+     * @return Datos administrativos sensibles
+     */
+    @GetMapping("/admin/sensitive-data")
+    @RoleAnnotations.AdminOnly
+    public ResponseEntity<Map<String, Object>> getAdminSensitiveData() {
+        Map<String, Object> adminData = new HashMap<>();
+        
+        adminData.put("message", "🔐 Datos administrativos sensibles");
+        adminData.put("server_config", Map.of(
+            "database_connections", 25,
+            "memory_usage", "2.1GB",
+            "active_sessions", 156,
+            "security_level", "HIGH"
+        ));
+        adminData.put("system_logs", Arrays.asList(
+            "2024-01-15 10:30:00 - Sistema iniciado correctamente",
+            "2024-01-15 10:31:15 - Conexión a base de datos establecida",
+            "2024-01-15 10:32:00 - Configuración de seguridad cargada"
+        ));
+        adminData.put("access_level", "ADMIN_ONLY");
+        adminData.put("timestamp", LocalDateTime.now());
+        
+        return ResponseEntity.ok(adminData);
+    }
+
+    /**
+     * Endpoint de gestión - para ADMIN y MANAGER
+     * @return Datos de gestión
+     */
+    @GetMapping("/manager/reports")
+    @RoleAnnotations.AdminOrManager
+    public ResponseEntity<Map<String, Object>> getManagerReports() {
+        Map<String, Object> managerData = new HashMap<>();
+        
+        managerData.put("message", "📊 Reportes de gestión");
+        managerData.put("sales_summary", Map.of(
+            "total_sales", 125600.75,
+            "monthly_growth", 12.5,
+            "top_regions", Arrays.asList("Norte", "Centro", "Sur"),
+            "pending_approvals", 8
+        ));
+        managerData.put("team_metrics", Map.of(
+            "active_employees", 45,
+            "productivity_score", 87.3,
+            "satisfaction_rate", 94.2
+        ));
+        managerData.put("access_level", "MANAGER_OR_ADMIN");
+        managerData.put("timestamp", LocalDateTime.now());
+        
+        return ResponseEntity.ok(managerData);
+    }
+
+    /**
+     * Endpoint de usuario - para ADMIN, MANAGER, USER
+     * @return Datos de usuario estándar
+     */
+    @GetMapping("/user/profile-data")
+    @RoleAnnotations.AdminManagerOrUser
+    public ResponseEntity<Map<String, Object>> getUserProfileData(Authentication authentication) {
+        Map<String, Object> userData = new HashMap<>();
+        
+        if (authentication.getPrincipal() instanceof Jwt jwt) {
+            userData.put("message", "👤 Datos de perfil de usuario");
+            userData.put("user_info", Map.of(
+                "name", jwt.getClaimAsString("name"),
+                "email", jwt.getClaimAsString("email"),
+                "department", "Desarrollo", // Ejemplo
+                "role", authentication.getAuthorities().toString()
+            ));
+            userData.put("preferences", Map.of(
+                "theme", "dark",
+                "language", "es",
+                "notifications_enabled", true,
+                "dashboard_layout", "grid"
+            ));
+            userData.put("recent_activity", Arrays.asList(
+                "Accedió al dashboard - " + LocalDateTime.now().minusHours(2),
+                "Actualizó perfil - " + LocalDateTime.now().minusDays(1),
+                "Descargó reporte - " + LocalDateTime.now().minusDays(3)
+            ));
+        }
+        
+        userData.put("access_level", "USER_OR_HIGHER");
+        userData.put("timestamp", LocalDateTime.now());
+        
+        return ResponseEntity.ok(userData);
+    }
+
+    /**
+     * Endpoint con autorización personalizada usando SpEL
+     * Solo permite acceso si el usuario tiene rol ADMIN O si es MANAGER y el email contiene "manager"
+     */
+    @GetMapping("/custom/conditional-access")
+    @PreAuthorize("hasRole('ADMIN') or (hasRole('MANAGER') and authentication.name.contains('manager'))")
+    public ResponseEntity<Map<String, Object>> getConditionalAccess(Authentication authentication) {
+        Map<String, Object> data = new HashMap<>();
+        
+        data.put("message", "🎯 Acceso condicional concedido");
+        data.put("condition", "ADMIN OR (MANAGER + email contains 'manager')");
+        data.put("user", authentication.getName());
+        data.put("authorities", authentication.getAuthorities());
+        data.put("access_granted_at", LocalDateTime.now());
+        
+        return ResponseEntity.ok(data);
     }
 }
