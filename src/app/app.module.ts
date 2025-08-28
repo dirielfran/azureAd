@@ -29,13 +29,28 @@ import { CommonModule } from '@angular/common';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { ProtectedDataComponent } from './components/protected-data.component';
+import { AccessDeniedComponent } from './components/access-denied.component';
+import { UserPermissionsComponent } from './components/user-permissions.component';
+
+// Importar servicios de autorización
+import { AuthorizationService } from './services/authorization.service';
+
+// Importar guards
+import { PermissionGuard, AdminGuard, ManagerGuard } from './guards/permission.guard';
+
+// Importar directivas
+import { 
+  HasPermissionDirective, 
+  IsAdminDirective, 
+  IsManagerDirective 
+} from './directives/has-permission.directive';
 
 // Importaciones de MSAL para Microsoft Entra ID
 import { 
   MsalModule, 
   MsalRedirectComponent, 
   MsalGuard, 
-  MsalInterceptor, 
+  MsalInterceptor,
   MsalService, 
   MSAL_INSTANCE, 
   MSAL_GUARD_CONFIG, 
@@ -168,7 +183,13 @@ export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
    */
   declarations: [
     AppComponent,              // Componente principal con navegación y login/logout
-    ProtectedDataComponent     // Componente de demostración para probar APIs protegidas
+    ProtectedDataComponent,    // Componente de demostración para probar APIs protegidas
+    AccessDeniedComponent,     // Componente para mostrar errores de acceso denegado
+    UserPermissionsComponent,  // Componente para mostrar permisos del usuario
+    // Directivas personalizadas
+    HasPermissionDirective,    // Directiva para renderizado condicional por permisos
+    IsAdminDirective,         // Directiva para contenido solo de administradores
+    IsManagerDirective        // Directiva para contenido de gestores
   ],
   
   /**
@@ -238,7 +259,13 @@ export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
     
     // 🔧 Servicios de MSAL
     MsalService,    // Servicio principal para operaciones de autenticación
-    MsalGuard       // Guard para proteger rutas que requieren autenticación
+    MsalGuard,      // Guard para proteger rutas que requieren autenticación
+    
+    // 🛡️ Servicios y Guards de Autorización
+    AuthorizationService,  // Servicio para gestión de permisos
+    PermissionGuard,      // Guard para verificar permisos específicos
+    AdminGuard,           // Guard para acceso de administradores
+    ManagerGuard          // Guard para acceso de gestores
   ],
   
   /**

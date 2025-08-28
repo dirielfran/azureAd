@@ -1,0 +1,34 @@
+{
+  "groupMembershipClaims": "SecurityGroup",
+  "optionalClaims": {
+    "idToken": [
+      {
+        "name": "email",
+        "source": null,
+        "essential": false,
+        "additionalProperties": []
+      },
+      {
+        "name": "family_name",
+        "source": null,
+        "essential": false,
+        "additionalProperties": []
+      },
+      {
+        "name": "given_name",
+        "source": null,
+        "essential": false,
+        "additionalProperties": []
+      }
+    ],
+    "accessToken": [
+      {
+        "name": "email",
+        "source": null,
+        "essential": false,
+        "additionalProperties": []
+      }
+    ],
+    "saml2Token": []
+  }
+}

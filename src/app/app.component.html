@@ -1,23 +1,201 @@
+<!--
+=============================================================================
+🏠 APLICACIÓN PRINCIPAL - SISTEMA DE AUTORIZACIÓN AZURE AD
+=============================================================================
+Componente principal que incluye navegación con permisos y estado del usuario
+=============================================================================
+-->
+
 <div class="app-container">
+  <!-- Header con navegación -->
   <header class="app-header">
-    <h1>Aplicación Angular con Microsoft Entra ID</h1>
-    <nav class="app-nav">
-      <div class="nav-links">
-        <a routerLink="/protected-data" routerLinkActive="active">Datos Protegidos</a>
+    <div class="header-content">
+      <div class="brand">
+        <h1>
+          <i class="fas fa-shield-alt"></i>
+          {{ title }}
+        </h1>
+        <span class="version">v1.0.0</span>
       </div>
+
+      <!-- Navegación principal -->
+      <nav class="app-nav" *ngIf="isLoggedIn">
+        <div class="nav-links">
+          <a 
+            routerLink="/mis-permisos" 
+            routerLinkActive="active"
+            class="nav-link"
+          >
+            <i class="fas fa-user-shield"></i>
+            Mis Permisos
+          </a>
+          
+          <a 
+            routerLink="/datos-protegidos" 
+            routerLinkActive="active"
+            class="nav-link"
+            *hasPermission="'DASHBOARD_LEER'"
+          >
+            <i class="fas fa-database"></i>
+            Datos Protegidos
+          </a>
+          
+          <!-- Menú Gestión (solo para gestores y admins) -->
+          <div class="nav-dropdown" *ngIf="isManager || isAdmin">
+            <button class="nav-dropdown-toggle">
+              <i class="fas fa-cog"></i>
+              Gestión
+              <i class="fas fa-chevron-down"></i>
+            </button>
+            <div class="nav-dropdown-menu">
+              <a 
+                routerLink="/usuarios" 
+                class="nav-dropdown-item"
+                *hasPermission="'USUARIOS_LEER'"
+              >
+                <i class="fas fa-users"></i>
+                Usuarios
+              </a>
+              <a 
+                routerLink="/reportes" 
+                class="nav-dropdown-item"
+                *hasPermission="null; module: 'REPORTES'"
+              >
+                <i class="fas fa-chart-bar"></i>
+                Reportes
+              </a>
+              <a 
+                routerLink="/configuracion" 
+                class="nav-dropdown-item"
+                *hasPermission="['CONFIG_LEER', 'CONFIG_EDITAR']; requireAll: false"
+              >
+                <i class="fas fa-sliders-h"></i>
+                Configuración
+              </a>
+            </div>
+          </div>
+          
+          <!-- Menú Administración (solo para admins) -->
+          <a 
+            routerLink="/admin" 
+            routerLinkActive="active"
+            class="nav-link admin-link"
+            *isAdmin
+          >
+            <i class="fas fa-crown"></i>
+            Administración
+          </a>
+        </div>
+      </nav>
+
+      <!-- Controles de autenticación -->
       <div class="auth-controls">
-        <button *ngIf="!isLoggedIn" (click)="login()" class="btn btn-primary">
+        <!-- Estado no autenticado -->
+        <button 
+          *ngIf="!isLoggedIn" 
+          (click)="login()" 
+          class="btn btn-primary login-btn"
+        >
+          <i class="fas fa-sign-in-alt"></i>
           Iniciar sesión con Microsoft
         </button>
+        
+        <!-- Estado autenticado -->
         <div *ngIf="isLoggedIn" class="user-info">
-          <span>¡Sesión iniciada!</span>
-          <button (click)="logout()" class="btn btn-secondary">Cerrar sesión</button>
+          <!-- Información del usuario -->
+          <div class="user-details">
+            <div class="user-avatar">
+              <i class="fas fa-user-circle"></i>
+            </div>
+            <div class="user-text">
+              <span class="user-name">{{ userName }}</span>
+              <span class="user-email">{{ userEmail }}</span>
+            </div>
+          </div>
+          
+          <!-- Estadísticas rápidas -->
+          <div class="user-stats" *ngIf="userInfo">
+            <div class="stat-item" title="Perfiles asignados">
+              <i class="fas fa-id-badge"></i>
+              <span>{{ profilesCount }}</span>
+            </div>
+            <div class="stat-item" title="Permisos disponibles">
+              <i class="fas fa-key"></i>
+              <span>{{ permissionsCount }}</span>
+            </div>
+          </div>
+          
+          <!-- Indicador de carga de permisos -->
+          <div 
+            *ngIf="isInitializingPermissions" 
+            class="loading-indicator"
+            title="Cargando permisos..."
+          >
+            <i class="fas fa-spinner fa-spin"></i>
+          </div>
+          
+          <!-- Botones de acción -->
+          <div class="user-actions">
+            <button 
+              (click)="initializePermissions()" 
+              class="btn btn-sm btn-outline"
+              [disabled]="isInitializingPermissions"
+              title="Actualizar permisos"
+            >
+              <i class="fas fa-sync-alt" [class.fa-spin]="isInitializingPermissions"></i>
+            </button>
+            
+            <button 
+              (click)="logout()" 
+              class="btn btn-sm btn-secondary"
+              title="Cerrar sesión"
+            >
+              <i class="fas fa-sign-out-alt"></i>
+              Salir
+            </button>
+          </div>
         </div>
       </div>
-    </nav>
+    </div>
   </header>
   
+  <!-- Contenido principal -->
   <main class="app-main">
+    <!-- Indicador de estado de permisos -->
+    <div 
+      *ngIf="isLoggedIn && !authorizationService.isAuthorized() && !isInitializingPermissions" 
+      class="permissions-warning"
+    >
+      <div class="warning-content">
+        <i class="fas fa-exclamation-triangle"></i>
+        <span>Los permisos no están cargados.</span>
+        <button 
+          (click)="initializePermissions()" 
+          class="btn btn-sm btn-warning"
+        >
+          Cargar Permisos
+        </button>
+      </div>
+    </div>
+    
+    <!-- Router outlet para el contenido de las páginas -->
     <router-outlet></router-outlet>
   </main>
+  
+  <!-- Footer -->
+  <footer class="app-footer" *ngIf="isLoggedIn">
+    <div class="footer-content">
+      <p>
+        <i class="fas fa-shield-alt"></i>
+        Sistema de Autorización basado en Azure AD
+      </p>
+      <div class="footer-links">
+        <a href="#" (click)="navigateTo('/mis-permisos')">Mis Permisos</a>
+        <span class="separator">|</span>
+        <a href="#" *hasPermission="'CONFIG_LEER'" (click)="navigateTo('/configuracion')">Configuración</a>
+        <span class="separator" *hasPermission="'CONFIG_LEER'">|</span>
+        <a href="#" *isAdmin (click)="navigateTo('/admin')">Administración</a>
+      </div>
+    </div>
+  </footer>
 </div>

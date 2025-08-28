@@ -12,7 +12,7 @@ export const environment = {
     }
   },
   apiConfig: {
-    baseUrl: 'https://localhost:5001/api',
+    baseUrl: 'http://localhost:8080/api',
     scopes: ['api://4a12fbd8-bf63-4c12-be4c-9678b207fbe7/access_as_user']
   }
 };
