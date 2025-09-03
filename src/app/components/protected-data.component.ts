@@ -34,6 +34,10 @@ import { MsalService } from '@azure/msal-angular';
         <button (click)="getAccessToken()" [disabled]="loading" class="btn btn-info">
           {{ loading ? 'Cargando...' : 'Ver Token de Acceso' }}
         </button>
+
+        <button (click)="debugAuth()" [disabled]="loading" class="btn btn-danger">
+          {{ loading ? 'Cargando...' : 'Diagnosticar Autenticación' }}
+        </button>
       </div>
 
       <div class="login-prompt" *ngIf="!isAuthenticated">
@@ -151,6 +155,11 @@ import { MsalService } from '@azure/msal-angular';
     .btn-warning {
       background-color: #ffc107;
       color: #212529;
+    }
+
+    .btn-danger {
+      background-color: #dc3545;
+      color: white;
     }
 
     .btn:hover:not(:disabled) {
@@ -372,6 +381,37 @@ export class ProtectedDataComponent implements OnInit {
           this.error = err.message;
           this.loading = false;
           console.error('Error obteniendo info de API:', err);
+        }
+      });
+    } catch (err: any) {
+      this.error = err.message || 'Error desconocido';
+      this.loading = false;
+    }
+  }
+
+  async debugAuth() {
+    this.loading = true;
+    this.error = '';
+    this.data = null;
+
+    try {
+      // Llamada al endpoint de diagnóstico
+      this.apiService.getData('/data/debug-auth').subscribe({
+        next: (response) => {
+          this.data = response;
+          this.loading = false;
+          console.log('🔍 Diagnóstico de autenticación:', response);
+          
+          // Mostrar información relevante en la consola
+          console.log('🔑 Authorities:', response.authorities);
+          console.log('🏢 Groups claim:', response.groups_claim);
+          console.log('🎭 Roles claim:', response.roles_claim);
+          console.log('📋 Scopes:', response.scopes);
+        },
+        error: (err) => {
+          this.error = err.message;
+          this.loading = false;
+          console.error('❌ Error en diagnóstico:', err);
         }
       });
     } catch (err: any) {

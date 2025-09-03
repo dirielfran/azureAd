@@ -4,11 +4,13 @@ import com.example.apiprotegida.security.RoleAnnotations;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Controlador para endpoints de datos protegidos
@@ -27,7 +29,7 @@ public class DataController {
      * @return Datos de ejemplo
      */
     @GetMapping
-    @RoleAnnotations.ValidScopeAndRole
+    @RoleAnnotations.ValidScope
     public ResponseEntity<Map<String, Object>> getData(Authentication authentication) {
         Map<String, Object> data = new HashMap<>();
         
@@ -211,6 +213,48 @@ public class DataController {
         reporte.put("tipo", tipo);
         
         return ResponseEntity.ok(reporte);
+    }
+
+    /**
+     * Endpoint para diagnosticar problemas de autorización
+     * @return Información detallada del token y permisos
+     */
+    @GetMapping("/debug-auth")
+    @RoleAnnotations.ValidScope
+    public ResponseEntity<Map<String, Object>> debugAuth(Authentication authentication) {
+        Map<String, Object> debug = new HashMap<>();
+        
+        debug.put("authenticated", authentication.isAuthenticated());
+        debug.put("authorities", authentication.getAuthorities());
+        debug.put("principal_type", authentication.getPrincipal().getClass().getSimpleName());
+        
+        if (authentication.getPrincipal() instanceof Jwt jwt) {
+            debug.put("jwt_claims", jwt.getClaims());
+            debug.put("groups_claim", jwt.getClaimAsStringList("groups"));
+            debug.put("roles_claim", jwt.getClaimAsStringList("roles"));
+            debug.put("scopes", jwt.getClaimAsStringList("scp"));
+            debug.put("user_email", jwt.getClaimAsString("email"));
+            debug.put("user_name", jwt.getClaimAsString("name"));
+            
+            // Análisis específico de roles
+            List<String> roleAuthorities = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(auth -> auth.startsWith("ROLE_"))
+                .collect(Collectors.toList());
+            debug.put("role_authorities", roleAuthorities);
+            
+            // Verificar si tiene los roles necesarios para AdminManagerOrUser
+            boolean hasAdminRole = roleAuthorities.contains("ROLE_ADMIN");
+            boolean hasManagerRole = roleAuthorities.contains("ROLE_MANAGER");
+            boolean hasUserRole = roleAuthorities.contains("ROLE_USER");
+            
+            debug.put("has_admin_role", hasAdminRole);
+            debug.put("has_manager_role", hasManagerRole);
+            debug.put("has_user_role", hasUserRole);
+            debug.put("can_access_dashboard", hasAdminRole || hasManagerRole || hasUserRole);
+        }
+        
+        return ResponseEntity.ok(debug);
     }
 
     /**

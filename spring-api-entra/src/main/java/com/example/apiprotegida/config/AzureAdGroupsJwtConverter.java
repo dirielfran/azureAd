@@ -43,14 +43,39 @@ public class AzureAdGroupsJwtConverter implements Converter<Jwt, Collection<Gran
             
             // Buscar perfil asociado al grupo y agregar como rol
             try {
+                System.out.println("🔍 Buscando perfil para grupo ID: " + groupId);
                 Optional<Perfil> perfil = perfilService.obtenerPerfilPorAzureGroupId(groupId);
                 if (perfil.isPresent()) {
-                    String roleName = "ROLE_" + perfil.get().getNombre().toUpperCase().replace(" ", "_");
+                    String perfilNombre = perfil.get().getNombre().toLowerCase();
+                    String roleName;
+                    
+                    // Mapear nombres de perfiles a roles estándar
+                    switch (perfilNombre) {
+                        case "administrador":
+                            roleName = "ROLE_ADMIN";
+                            break;
+                        case "gestor":
+                            roleName = "ROLE_MANAGER";
+                            break;
+                        case "usuario":
+                        case "usuario básico":
+                            roleName = "ROLE_USER";
+                            break;
+                        case "lector":
+                            roleName = "ROLE_READER";
+                            break;
+                        default:
+                            roleName = "ROLE_" + perfil.get().getNombre().toUpperCase().replace(" ", "_");
+                    }
+                    
                     authorities.add(new SimpleGrantedAuthority(roleName));
                     System.out.println("✅ Perfil encontrado: " + perfil.get().getNombre() + " -> " + roleName);
+                } else {
+                    System.out.println("❌ NO se encontró perfil para grupo ID: " + groupId);
                 }
             } catch (Exception e) {
                 System.out.println("⚠️ Error al buscar perfil para grupo " + groupId + ": " + e.getMessage());
+                e.printStackTrace();
             }
         }
         
