@@ -58,14 +58,17 @@ export class AuthorizationService {
   // Estado reactivo de los permisos
   private permissionsSubject = new BehaviorSubject<string[]>([]);
   private userInfoSubject = new BehaviorSubject<UserInfo | null>(null);
+  private loadingSubject = new BehaviorSubject<boolean>(false);
 
   public permissions$ = this.permissionsSubject.asObservable();
   public userInfo$ = this.userInfoSubject.asObservable();
+  public loading$ = this.loadingSubject.asObservable();
 
   constructor(
     private http: HttpClient,
     private msalService: MsalService
   ) {
+    console.log('🔧 [AuthorizationService] Inicializando servicio de autorización...');
     this.loadPermissionsFromStorage();
   }
 
@@ -79,17 +82,34 @@ export class AuthorizationService {
    * Inicializa los permisos del usuario obteniendo la información del backend
    */
   initializeUserPermissions(): Observable<UserInfo> {
-    console.log('🔄 Inicializando permisos del usuario...');
+    console.log('🔄 [AuthorizationService] Inicializando permisos del usuario...');
+    console.log('🌐 [AuthorizationService] URL del endpoint:', `${this.baseUrl}/informacion-usuario`);
+    this.loadingSubject.next(true);
     
     return this.http.get<UserInfo>(`${this.baseUrl}/informacion-usuario`).pipe(
       tap(userInfo => {
-        console.log('✅ Información del usuario obtenida:', userInfo);
+        console.log('✅ [AuthorizationService] Información del usuario obtenida del backend:', userInfo);
+        console.log('📊 [AuthorizationService] Detalles del usuario:');
+        console.log('  - Email:', userInfo.email);
+        console.log('  - Nombre:', userInfo.nombre);
+        console.log('  - Grupos:', userInfo.grupos);
+        console.log('  - Perfiles:', userInfo.perfiles?.length || 0);
+        console.log('  - Permisos:', userInfo.permisos?.length || 0);
+        console.log('  - Códigos de permisos:', userInfo.codigosPermisos);
+        
         this.storeUserInfo(userInfo);
         this.updatePermissionsState(userInfo.codigosPermisos);
+        this.loadingSubject.next(false);
       }),
       catchError(error => {
-        console.error('❌ Error al obtener información del usuario:', error);
+        console.error('❌ [AuthorizationService] Error al obtener información del usuario:', error);
+        console.error('🔍 [AuthorizationService] Detalles del error:', {
+          status: error.status,
+          message: error.message,
+          url: error.url
+        });
         this.clearStoredData();
+        this.loadingSubject.next(false);
         return throwError(() => error);
       })
     );
@@ -99,16 +119,22 @@ export class AuthorizationService {
    * Carga los permisos desde sessionStorage al inicializar el servicio
    */
   private loadPermissionsFromStorage(): void {
+    console.log('🔍 [AuthorizationService] Verificando permisos almacenados en sessionStorage...');
     try {
       const storedUserInfo = sessionStorage.getItem(this.userInfoKey);
       if (storedUserInfo) {
+        console.log('📦 [AuthorizationService] Información del usuario encontrada en sessionStorage');
         const userInfo: UserInfo = JSON.parse(storedUserInfo);
+        console.log('👤 [AuthorizationService] Usuario cargado desde storage:', userInfo.nombre);
+        console.log('🔑 [AuthorizationService] Permisos cargados desde storage:', userInfo.codigosPermisos);
         this.userInfoSubject.next(userInfo);
         this.updatePermissionsState(userInfo.codigosPermisos);
-        console.log('📦 Permisos cargados desde sessionStorage');
+        console.log('✅ [AuthorizationService] Permisos cargados exitosamente desde sessionStorage');
+      } else {
+        console.log('📭 [AuthorizationService] No hay información del usuario en sessionStorage');
       }
     } catch (error) {
-      console.error('❌ Error al cargar permisos desde storage:', error);
+      console.error('❌ [AuthorizationService] Error al cargar permisos desde storage:', error);
       this.clearStoredData();
     }
   }
@@ -286,6 +312,13 @@ export class AuthorizationService {
     const isAuth = permissions.length > 0;
     console.log(`🔍 Usuario autorizado: ${isAuth ? '✅' : '❌'}`);
     return isAuth;
+  }
+
+  /**
+   * Obtiene el estado actual de carga
+   */
+  isLoading(): boolean {
+    return this.loadingSubject.value;
   }
 
   /**

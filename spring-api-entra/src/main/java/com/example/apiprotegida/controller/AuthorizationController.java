@@ -28,10 +28,21 @@ public class AuthorizationController {
      */
     @GetMapping("/informacion-usuario")
     public ResponseEntity<Map<String, Object>> obtenerInformacionUsuario(Authentication authentication) {
+        System.out.println("🔍 [AuthorizationController] Solicitud de información de usuario recibida");
+        System.out.println("👤 [AuthorizationController] Usuario autenticado: " + authentication.getName());
+        System.out.println("🔐 [AuthorizationController] Authorities: " + authentication.getAuthorities());
+        
         try {
             Map<String, Object> informacionUsuario = authorizationService.obtenerInformacionCompleteUsuario(authentication);
+            System.out.println("✅ [AuthorizationController] Información de usuario obtenida exitosamente");
+            System.out.println("📊 [AuthorizationController] Perfiles encontrados: " + 
+                ((List<?>) informacionUsuario.get("perfiles")).size());
+            System.out.println("🔑 [AuthorizationController] Permisos encontrados: " + 
+                ((List<?>) informacionUsuario.get("permisos")).size());
             return ResponseEntity.ok(informacionUsuario);
         } catch (Exception e) {
+            System.err.println("❌ [AuthorizationController] Error al obtener información del usuario: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                                 .body(createMap("error", "Error al obtener información del usuario"));
         }

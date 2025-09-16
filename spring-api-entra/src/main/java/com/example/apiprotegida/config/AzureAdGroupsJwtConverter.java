@@ -25,25 +25,29 @@ public class AzureAdGroupsJwtConverter implements Converter<Jwt, Collection<Gran
 
     @Override
     public Collection<GrantedAuthority> convert(@NonNull Jwt jwt) {
+        System.out.println("🔧 [AzureAdGroupsJwtConverter] Iniciando conversión de JWT a authorities");
         Collection<GrantedAuthority> authorities = new ArrayList<>();
         
         // Extraer información del usuario del token JWT
         String userEmail = getUserEmail(jwt);
         String userName = getUserName(jwt);
         
-        System.out.println("👤 Usuario autenticado: " + userName + " (" + userEmail + ")");
+        System.out.println("👤 [AzureAdGroupsJwtConverter] Usuario autenticado: " + userName + " (" + userEmail + ")");
+        System.out.println("🔑 [AzureAdGroupsJwtConverter] Token JWT recibido - Issuer: " + jwt.getIssuer());
+        System.out.println("🔑 [AzureAdGroupsJwtConverter] Token JWT recibido - Audience: " + jwt.getAudience());
         
         // Extraer grupos de Azure AD del token
         List<String> azureGroups = getAzureGroups(jwt);
-        System.out.println("🏢 Grupos de Azure AD: " + azureGroups);
+        System.out.println("🏢 [AzureAdGroupsJwtConverter] Grupos de Azure AD encontrados: " + azureGroups);
         
         // Agregar grupos como authorities para que puedan ser procesados por el AuthorizationService
         for (String groupId : azureGroups) {
             authorities.add(new SimpleGrantedAuthority("GROUP_" + groupId));
+            System.out.println("➕ [AzureAdGroupsJwtConverter] Agregado GROUP_" + groupId + " como authority");
             
             // Buscar perfil asociado al grupo y agregar como rol
             try {
-                System.out.println("🔍 Buscando perfil para grupo ID: " + groupId);
+                System.out.println("🔍 [AzureAdGroupsJwtConverter] Buscando perfil para grupo ID: " + groupId);
                 Optional<Perfil> perfil = perfilService.obtenerPerfilPorAzureGroupId(groupId);
                 if (perfil.isPresent()) {
                     String perfilNombre = perfil.get().getNombre().toLowerCase();
@@ -69,12 +73,12 @@ public class AzureAdGroupsJwtConverter implements Converter<Jwt, Collection<Gran
                     }
                     
                     authorities.add(new SimpleGrantedAuthority(roleName));
-                    System.out.println("✅ Perfil encontrado: " + perfil.get().getNombre() + " -> " + roleName);
+                    System.out.println("✅ [AzureAdGroupsJwtConverter] Perfil encontrado: " + perfil.get().getNombre() + " -> " + roleName);
                 } else {
-                    System.out.println("❌ NO se encontró perfil para grupo ID: " + groupId);
+                    System.out.println("❌ [AzureAdGroupsJwtConverter] NO se encontró perfil para grupo ID: " + groupId);
                 }
             } catch (Exception e) {
-                System.out.println("⚠️ Error al buscar perfil para grupo " + groupId + ": " + e.getMessage());
+                System.out.println("⚠️ [AzureAdGroupsJwtConverter] Error al buscar perfil para grupo " + groupId + ": " + e.getMessage());
                 e.printStackTrace();
             }
         }
@@ -83,13 +87,15 @@ public class AzureAdGroupsJwtConverter implements Converter<Jwt, Collection<Gran
         if (azureGroups.isEmpty()) {
             String defaultRole = getDefaultRole(userEmail);
             authorities.add(new SimpleGrantedAuthority(defaultRole));
-            System.out.println("📝 Rol por defecto asignado: " + userEmail + " -> " + defaultRole);
+            System.out.println("📝 [AzureAdGroupsJwtConverter] Rol por defecto asignado: " + userEmail + " -> " + defaultRole);
         }
         
         // Agregar scope por defecto para usuarios autenticados
         authorities.add(new SimpleGrantedAuthority("SCOPE_access_as_user"));
+        System.out.println("➕ [AzureAdGroupsJwtConverter] Agregado SCOPE_access_as_user como authority");
         
-        System.out.println("🔐 Authorities finales: " + authorities);
+        System.out.println("🔐 [AzureAdGroupsJwtConverter] Authorities finales generadas: " + authorities);
+        System.out.println("✅ [AzureAdGroupsJwtConverter] Conversión de JWT completada exitosamente");
         return authorities;
     }
 

@@ -81,14 +81,16 @@ export class PermissionGuard implements CanActivate, CanActivateChild {
     state: RouterStateSnapshot
   ): Observable<boolean> | Promise<boolean> | boolean {
     
-    console.log(`🛡️ PermissionGuard: Verificando acceso a ${state.url}`);
+    console.log(`🛡️ [PermissionGuard] Verificando acceso a ${state.url}`);
+    console.log(`📍 [PermissionGuard] Ruta completa:`, route.routeConfig?.path);
 
     // Verificar si el usuario está autenticado en MSAL
     if (!this.isUserAuthenticated()) {
-      console.log('❌ Usuario no autenticado, redirigiendo al login');
+      console.log('❌ [PermissionGuard] Usuario no autenticado, redirigiendo al login');
       this.msalService.loginRedirect();
       return false;
     }
+    console.log('✅ [PermissionGuard] Usuario autenticado en MSAL');
 
     // Obtener configuración de permisos desde la ruta
     const routeData = route.data;
@@ -97,19 +99,28 @@ export class PermissionGuard implements CanActivate, CanActivateChild {
     const action = routeData['action'] as string;
     const requireAll = routeData['requireAll'] as boolean || false;
 
+    console.log('🔍 [PermissionGuard] Configuración de la ruta:');
+    console.log('  - Permisos requeridos:', permissions);
+    console.log('  - Módulo:', module);
+    console.log('  - Acción:', action);
+    console.log('  - Requerir todos:', requireAll);
+
     // Si no hay restricciones específicas, permitir acceso
     if (!permissions && !module && !action) {
-      console.log('✅ Ruta sin restricciones específicas, acceso permitido');
+      console.log('✅ [PermissionGuard] Ruta sin restricciones específicas, acceso permitido');
       return true;
     }
 
     // Verificar si los permisos están cargados
     if (!this.authorizationService.isAuthorized()) {
-      console.log('⏳ Permisos no cargados, inicializando...');
+      console.log('⏳ [PermissionGuard] Permisos no cargados, inicializando...');
       return this.authorizationService.initializeUserPermissions().pipe(
-        map(() => this.evaluatePermissions(permissions, module, action, requireAll, state.url)),
+        map(() => {
+          console.log('🔄 [PermissionGuard] Permisos cargados, evaluando acceso...');
+          return this.evaluatePermissions(permissions, module, action, requireAll, state.url);
+        }),
         catchError(error => {
-          console.error('❌ Error al cargar permisos:', error);
+          console.error('❌ [PermissionGuard] Error al cargar permisos:', error);
           this.handleAccessDenied(state.url);
           return of(false);
         })
@@ -117,6 +128,7 @@ export class PermissionGuard implements CanActivate, CanActivateChild {
     }
 
     // Evaluar permisos
+    console.log('🔍 [PermissionGuard] Evaluando permisos específicos...');
     const hasAccess = this.evaluatePermissions(permissions, module, action, requireAll, state.url);
     
     if (!hasAccess) {

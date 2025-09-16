@@ -22,16 +22,29 @@ export class AppComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
+    console.log('🚀 [AppComponent] Inicializando aplicación...');
+    
     // Suscribirse a cambios en la información del usuario
     this.subscription.add(
       this.authorizationService.userInfo$.subscribe(userInfo => {
+        console.log('👤 [AppComponent] Información del usuario actualizada:', userInfo);
         this.userInfo = userInfo;
       })
     );
 
+    // Verificar estado de autenticación
+    console.log('🔍 [AppComponent] Verificando estado de autenticación...');
+    console.log('🔐 [AppComponent] ¿Usuario logueado?', this.isLoggedIn);
+    console.log('🛡️ [AppComponent] ¿Usuario autorizado?', this.authorizationService.isAuthorized());
+
     // Inicializar permisos si el usuario ya está autenticado
     if (this.isLoggedIn && !this.authorizationService.isAuthorized()) {
+      console.log('⚡ [AppComponent] Usuario autenticado pero sin permisos, inicializando...');
       this.initializePermissions();
+    } else if (this.isLoggedIn && this.authorizationService.isAuthorized()) {
+      console.log('✅ [AppComponent] Usuario completamente autenticado y autorizado');
+    } else {
+      console.log('❌ [AppComponent] Usuario no autenticado, mostrando pantalla de login');
     }
   }
 
@@ -43,6 +56,8 @@ export class AppComponent implements OnInit, OnDestroy {
    * Inicia sesión con Microsoft Entra ID
    */
   login() {
+    console.log('🔑 [AppComponent] Iniciando proceso de login...');
+    console.log('🌐 [AppComponent] Redirigiendo a Microsoft Entra ID...');
     this.msalService.loginRedirect();
   }
 
@@ -50,7 +65,10 @@ export class AppComponent implements OnInit, OnDestroy {
    * Cierra sesión y limpia los permisos
    */
   logout() {
+    console.log('👋 [AppComponent] Iniciando proceso de logout...');
+    console.log('🧹 [AppComponent] Limpiando permisos del usuario...');
     this.authorizationService.logout();
+    console.log('🌐 [AppComponent] Redirigiendo a Microsoft para cerrar sesión...');
     this.msalService.logoutRedirect();
   }
 
@@ -60,6 +78,12 @@ export class AppComponent implements OnInit, OnDestroy {
   get isLoggedIn(): boolean {
     return this.msalService.instance.getAllAccounts().length > 0;
   }
+
+
+
+
+
+  
 
   /**
    * Obtiene el nombre del usuario actual
@@ -97,18 +121,25 @@ export class AppComponent implements OnInit, OnDestroy {
    * Inicializa los permisos del usuario
    */
   initializePermissions(): void {
-    if (this.isInitializingPermissions) return;
+    if (this.isInitializingPermissions) {
+      console.log('⏳ [AppComponent] Ya se están inicializando permisos, omitiendo...');
+      return;
+    }
     
     this.isInitializingPermissions = true;
-    console.log('🔄 Inicializando permisos del usuario...');
+    console.log('🔄 [AppComponent] Inicializando permisos del usuario...');
+    console.log('📡 [AppComponent] Llamando al backend para obtener información del usuario...');
     
     this.authorizationService.initializeUserPermissions().subscribe({
       next: (userInfo) => {
-        console.log('✅ Permisos inicializados correctamente:', userInfo);
+        console.log('✅ [AppComponent] Permisos inicializados correctamente:', userInfo);
+        console.log('📊 [AppComponent] Perfiles del usuario:', userInfo.perfiles);
+        console.log('🔑 [AppComponent] Permisos del usuario:', userInfo.permisos);
+        console.log('📋 [AppComponent] Códigos de permisos:', userInfo.codigosPermisos);
         this.isInitializingPermissions = false;
       },
       error: (error) => {
-        console.error('❌ Error al inicializar permisos:', error);
+        console.error('❌ [AppComponent] Error al inicializar permisos:', error);
         this.isInitializingPermissions = false;
       }
     });

@@ -4,6 +4,7 @@ import { MsalGuard } from '@azure/msal-angular';
 import { ProtectedDataComponent } from './components/protected-data.component';
 import { AccessDeniedComponent } from './components/access-denied.component';
 import { UserPermissionsComponent } from './components/user-permissions.component';
+import { AuthStatusComponent } from './components/auth-status.component';
 import { PermissionGuard, AdminGuard, ManagerGuard } from './guards/permission.guard';
 
 const routes: Routes = [
@@ -21,6 +22,15 @@ const routes: Routes = [
     canActivate: [MsalGuard],
     data: { 
       title: 'Mis Permisos'
+    }
+  },
+  
+  // Estado de autenticación (para debugging)
+  { 
+    path: 'estado-auth', 
+    component: AuthStatusComponent,
+    data: { 
+      title: 'Estado de Autenticación'
     }
   },
   

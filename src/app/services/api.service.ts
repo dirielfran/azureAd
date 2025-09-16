@@ -122,7 +122,15 @@ export class ApiService {
    * @returns true si está autenticado, false en caso contrario
    */
   isAuthenticated(): boolean {
-    return this.msalService.instance.getAllAccounts().length > 0;
+    const accounts = this.msalService.instance.getAllAccounts();
+    const isAuth = accounts.length > 0;
+    console.log('🔍 [ApiService] Verificando autenticación:');
+    console.log('  - Cuentas encontradas:', accounts.length);
+    console.log('  - ¿Autenticado?', isAuth);
+    if (isAuth) {
+      console.log('  - Primera cuenta:', accounts[0].name || accounts[0].username);
+    }
+    return isAuth;
   }
 
   /**
@@ -130,10 +138,11 @@ export class ApiService {
    * @returns Promise con el token de acceso
    */
   async getAccessToken(): Promise<string | null> {
+    console.log('🔑 [ApiService] Solicitando token de acceso...');
     try {
       const accounts = this.msalService.instance.getAllAccounts();
       if (accounts.length === 0) {
-        console.error('No hay cuentas autenticadas');
+        console.error('❌ [ApiService] No hay cuentas autenticadas');
         return null;
       }
 
@@ -142,17 +151,19 @@ export class ApiService {
         account: accounts[0]
       };
 
-      console.log('Solicitando token con scopes:', tokenRequest.scopes);
+      console.log('📋 [ApiService] Scopes solicitados:', tokenRequest.scopes);
+      console.log('👤 [ApiService] Cuenta utilizada:', accounts[0].name || accounts[0].username);
       
       const response = await this.msalService.instance.acquireTokenSilent(tokenRequest);
-      console.log('Token obtenido exitosamente');
+      console.log('✅ [ApiService] Token obtenido exitosamente (silencioso)');
+      console.log('🔑 [ApiService] Token (primeros 50 chars):', response.accessToken.substring(0, 50) + '...');
       return response.accessToken;
     } catch (error) {
-      console.error('Error obteniendo token silenciosamente:', error);
+      console.error('❌ [ApiService] Error obteniendo token silenciosamente:', error);
       
       // Si falla el token silencioso, intentar con popup
       try {
-        console.log('Intentando obtener token con popup...');
+        console.log('🔄 [ApiService] Intentando obtener token con popup...');
         const accounts = this.msalService.instance.getAllAccounts();
         const tokenRequest = {
           scopes: ['user.read', 'api://4a12fbd8-bf63-4c12-be4c-9678b207fbe7/access_as_user'],
@@ -160,10 +171,11 @@ export class ApiService {
         };
         
         const response = await this.msalService.instance.acquireTokenPopup(tokenRequest);
-        console.log('Token obtenido con popup exitosamente');
+        console.log('✅ [ApiService] Token obtenido con popup exitosamente');
+        console.log('🔑 [ApiService] Token (primeros 50 chars):', response.accessToken.substring(0, 50) + '...');
         return response.accessToken;
       } catch (popupError) {
-        console.error('Error obteniendo token con popup:', popupError);
+        console.error('❌ [ApiService] Error obteniendo token con popup:', popupError);
         return null;
       }
     }

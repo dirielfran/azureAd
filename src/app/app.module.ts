@@ -45,6 +45,9 @@ import {
   IsManagerDirective 
 } from './directives/has-permission.directive';
 
+// Componente de estado de autenticación
+import { AuthStatusComponent } from './components/auth-status.component';
+
 // Importaciones de MSAL para Microsoft Entra ID
 import { 
   MsalModule, 
@@ -186,6 +189,7 @@ export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
     ProtectedDataComponent,    // Componente de demostración para probar APIs protegidas
     AccessDeniedComponent,     // Componente para mostrar errores de acceso denegado
     UserPermissionsComponent,  // Componente para mostrar permisos del usuario
+    AuthStatusComponent,       // Componente para mostrar estado de autenticación
     // Directivas personalizadas
     HasPermissionDirective,    // Directiva para renderizado condicional por permisos
     IsAdminDirective,         // Directiva para contenido solo de administradores

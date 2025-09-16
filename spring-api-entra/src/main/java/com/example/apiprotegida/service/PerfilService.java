@@ -21,7 +21,7 @@ public class PerfilService {
 
     @Autowired
     private PerfilRepository perfilRepository;
-    
+
     @Autowired
     private PermisoRepository permisoRepository;
 
@@ -149,11 +149,11 @@ public class PerfilService {
     public Perfil asignarPermiso(Long perfilId, Long permisoId) {
         Perfil perfil = perfilRepository.findById(perfilId)
             .orElseThrow(() -> new IllegalArgumentException("Perfil no encontrado con ID: " + perfilId));
-        
+
         Permiso permiso = permisoRepository.findById(permisoId)
             .orElseThrow(() -> new IllegalArgumentException("Permiso no encontrado con ID: " + permisoId));
 
-        perfil.addPermiso(permiso);
+        perfil. addPermiso(permiso);
         return perfilRepository.save(perfil);
     }
 
@@ -163,7 +163,7 @@ public class PerfilService {
     public Perfil removerPermiso(Long perfilId, Long permisoId) {
         Perfil perfil = perfilRepository.findById(perfilId)
             .orElseThrow(() -> new IllegalArgumentException("Perfil no encontrado con ID: " + perfilId));
-        
+
         Permiso permiso = permisoRepository.findById(permisoId)
             .orElseThrow(() -> new IllegalArgumentException("Permiso no encontrado con ID: " + permisoId));
 
