@@ -1,6 +1,7 @@
 package com.example.apiprotegida.config;
 
 import com.example.apiprotegida.model.Perfil;
+import com.example.apiprotegida.model.Permiso;
 import com.example.apiprotegida.service.PerfilService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,15 +13,17 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 
-import java.time.Instant;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 /**
  * Tests unitarios para AzureAdGroupsJwtConverter
+ * 
+ * Este convertidor se encarga de extraer grupos de Azure AD del JWT
+ * y convertirlos en authorities de Spring Security basado en perfiles de la base de datos
  */
 @ExtendWith(MockitoExtension.class)
 class AzureAdGroupsJwtConverterTest {
@@ -28,539 +31,244 @@ class AzureAdGroupsJwtConverterTest {
     @Mock
     private PerfilService perfilService;
 
+    @Mock
+    private Jwt jwt;
+
     @InjectMocks
     private AzureAdGroupsJwtConverter converter;
 
-    private Jwt mockJwt;
-    private Perfil perfilAdmin;
-    private Perfil perfilUser;
+    private Perfil mockPerfil;
+    private Permiso mockPermiso1;
+    private Permiso mockPermiso2;
+    private Permiso mockPermisoInactivo;
 
     @BeforeEach
     void setUp() {
-        // Crear perfiles de prueba
-        perfilAdmin = new Perfil("Administrador", "Perfil de administrador", "admin-group-id", "Admin Group");
-        perfilAdmin.setId(1L);
-        perfilAdmin.setActivo(true);
-
-        perfilUser = new Perfil("Usuario", "Perfil de usuario básico", "user-group-id", "User Group");
-        perfilUser.setId(2L);
-        perfilUser.setActivo(true);
+        setupTestData();
     }
 
-    // ========== TESTS PARA CONVERSIÓN BÁSICA DE JWT ==========
+    private void setupTestData() {
+        // Crear permisos de prueba
+        mockPermiso1 = new Permiso("USUARIOS_LEER", "Leer Usuarios", "Permiso para leer usuarios", "USUARIOS", "LEER");
+        mockPermiso1.setId(1L);
+        mockPermiso1.setActivo(true);
+
+        mockPermiso2 = new Permiso("USUARIOS_CREAR", "Crear Usuarios", "Permiso para crear usuarios", "USUARIOS", "CREAR");
+        mockPermiso2.setId(2L);
+        mockPermiso2.setActivo(true);
+
+        mockPermisoInactivo = new Permiso("USUARIOS_ELIMINAR", "Eliminar Usuarios", "Permiso para eliminar usuarios", "USUARIOS", "ELIMINAR");
+        mockPermisoInactivo.setId(3L);
+        mockPermisoInactivo.setActivo(false);
+
+        // Crear perfil de prueba
+        mockPerfil = new Perfil("Administrador", "Perfil de administrador", "admin-group-id", "Admin Group");
+        mockPerfil.setId(1L);
+        mockPerfil.addPermiso(mockPermiso1);
+        mockPerfil.addPermiso(mockPermiso2);
+        mockPerfil.addPermiso(mockPermisoInactivo);
+    }
 
     @Test
-    void convert_ConJwtValidoYGrupos_DeberiaRetornarAuthorities() {
+    void convert_ConGruposValidos_DeberiaRetornarAuthoritiesCompletas() {
         // Arrange
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("groups", Arrays.asList("admin-group-id", "user-group-id"));
-        claims.put("email", "test@example.com");
-        claims.put("name", "Test User");
+        List<String> grupos = Arrays.asList("admin-group-id", "user-group-id");
+        when(jwt.getClaimAsStringList("groups")).thenReturn(grupos);
+        when(jwt.getClaimAsString("email")).thenReturn("admin@test.com");
         
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("groups", Arrays.asList("admin-group-id", "user-group-id"))
-                .claim("email", "test@example.com")
-                .claim("name", "Test User")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        when(perfilService.obtenerPerfilPorAzureGroupId("admin-group-id"))
-                .thenReturn(Optional.of(perfilAdmin));
-        when(perfilService.obtenerPerfilPorAzureGroupId("user-group-id"))
-                .thenReturn(Optional.of(perfilUser));
-
-        // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
-
-        // Assert
-        assertNotNull(result);
-        assertTrue(result.size() >= 4); // GROUP_ + ROLE_ + SCOPE_
-        assertTrue(result.stream().anyMatch(auth -> "GROUP_admin-group-id".equals(auth.getAuthority())));
-        assertTrue(result.stream().anyMatch(auth -> "GROUP_user-group-id".equals(auth.getAuthority())));
-        assertTrue(result.stream().anyMatch(auth -> "ROLE_ADMIN".equals(auth.getAuthority())));
-        assertTrue(result.stream().anyMatch(auth -> "ROLE_USER".equals(auth.getAuthority())));
-        assertTrue(result.stream().anyMatch(auth -> "SCOPE_access_as_user".equals(auth.getAuthority())));
-    }
-
-    @Test
-    void convert_ConJwtSinGrupos_DeberiaAsignarRolPorDefecto() {
-        // Arrange
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("email", "test@example.com")
-                .claim("name", "Test User")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
-
-        // Assert
-        assertNotNull(result);
-        assertTrue(result.size() >= 2); // ROLE_ + SCOPE_
-        assertTrue(result.stream().anyMatch(auth -> "ROLE_USER".equals(auth.getAuthority())));
-        assertTrue(result.stream().anyMatch(auth -> "SCOPE_access_as_user".equals(auth.getAuthority())));
-    }
-
-    @Test
-    void convert_ConJwtConGruposInexistentes_DeberiaAsignarRolPorDefecto() {
-        // Arrange
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("groups", Arrays.asList("unknown-group-id"))
-                .claim("email", "test@example.com")
-                .claim("name", "Test User")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        when(perfilService.obtenerPerfilPorAzureGroupId("unknown-group-id"))
+        when(perfilService.obtenerPerfilPorAzureGroupIdConPermisos("admin-group-id"))
+                .thenReturn(Optional.of(mockPerfil));
+        when(perfilService.obtenerPerfilPorAzureGroupIdConPermisos("user-group-id"))
                 .thenReturn(Optional.empty());
 
         // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
+        Collection<GrantedAuthority> authorities = converter.convert(jwt);
 
         // Assert
-        assertNotNull(result);
-        assertTrue(result.size() >= 2); // GROUP_ + SCOPE_ (no ROLE_ porque hay grupos)
-        assertTrue(result.stream().anyMatch(auth -> "GROUP_unknown-group-id".equals(auth.getAuthority())));
-        // No se asigna ROLE_USER porque hay grupos presentes, aunque no se encuentren perfiles
-        assertTrue(result.stream().anyMatch(auth -> "SCOPE_access_as_user".equals(auth.getAuthority())));
+        assertNotNull(authorities);
+        assertFalse(authorities.isEmpty());
+        
+        // Verificar que se agregaron los grupos como authorities
+        assertTrue(authorities.stream().anyMatch(auth -> "GROUP_admin-group-id".equals(auth.getAuthority())));
+        assertTrue(authorities.stream().anyMatch(auth -> "GROUP_user-group-id".equals(auth.getAuthority())));
+        
+        // Verificar que se agregó el rol del perfil
+        assertTrue(authorities.stream().anyMatch(auth -> "ROLE_ADMIN_GROUP".equals(auth.getAuthority())));
+        
+        // Verificar que se agregaron los permisos activos (usando getNombre(), no getCodigo())
+        assertTrue(authorities.stream().anyMatch(auth -> "Leer Usuarios".equals(auth.getAuthority())));
+        assertTrue(authorities.stream().anyMatch(auth -> "Crear Usuarios".equals(auth.getAuthority())));
+        
+        // Verificar que NO se agregó el permiso inactivo
+        assertFalse(authorities.stream().anyMatch(auth -> "Eliminar Usuarios".equals(auth.getAuthority())));
+        
+        verify(perfilService, times(2)).obtenerPerfilPorAzureGroupIdConPermisos(anyString());
     }
 
     @Test
-    void convert_ConJwtConEmailAdmin_DeberiaAsignarRolAdmin() {
+    void convert_ConGruposEnClaimRoles_DeberiaExtraerGruposCorrectamente() {
         // Arrange
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("email", "admin@company.com")
-                .claim("name", "Admin User")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
+        when(jwt.getClaimAsStringList("groups")).thenReturn(null);
+        when(jwt.getClaimAsStringList("roles")).thenReturn(Arrays.asList("role-group-id"));
+        when(jwt.getClaimAsString("email")).thenReturn("user@test.com");
+        
+        when(perfilService.obtenerPerfilPorAzureGroupIdConPermisos("role-group-id"))
+                .thenReturn(Optional.of(mockPerfil));
 
         // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
+        Collection<GrantedAuthority> authorities = converter.convert(jwt);
 
         // Assert
-        assertNotNull(result);
-        assertTrue(result.stream().anyMatch(auth -> "ROLE_ADMIN".equals(auth.getAuthority())));
+        assertNotNull(authorities);
+        assertTrue(authorities.stream().anyMatch(auth -> "GROUP_role-group-id".equals(auth.getAuthority())));
+        verify(perfilService).obtenerPerfilPorAzureGroupIdConPermisos("role-group-id");
     }
 
     @Test
-    void convert_ConJwtConEmailManager_DeberiaAsignarRolManager() {
+    void convert_ConGruposYRoles_DeberiaCombinarAmbosClaims() {
         // Arrange
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("email", "manager@company.com")
-                .claim("name", "Manager User")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
+        when(jwt.getClaimAsStringList("groups")).thenReturn(Arrays.asList("group1"));
+        when(jwt.getClaimAsStringList("roles")).thenReturn(Arrays.asList("role1"));
+        when(jwt.getClaimAsString("email")).thenReturn("user@test.com");
+        
+        when(perfilService.obtenerPerfilPorAzureGroupIdConPermisos(anyString()))
+                .thenReturn(Optional.empty());
 
         // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
+        Collection<GrantedAuthority> authorities = converter.convert(jwt);
 
         // Assert
-        assertNotNull(result);
-        assertTrue(result.stream().anyMatch(auth -> "ROLE_MANAGER".equals(auth.getAuthority())));
-    }
-
-    // ========== TESTS PARA MAPEO DE PERFILES A ROLES ==========
-
-    @Test
-    void convert_ConPerfilAdministrador_DeberiaMapearARoleAdmin() {
-        // Arrange
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("groups", Arrays.asList("admin-group-id"))
-                .claim("email", "test@example.com")
-                .claim("name", "Test User")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        when(perfilService.obtenerPerfilPorAzureGroupId("admin-group-id"))
-                .thenReturn(Optional.of(perfilAdmin));
-
-        // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
-
-        // Assert
-        assertTrue(result.stream().anyMatch(auth -> "ROLE_ADMIN".equals(auth.getAuthority())));
+        assertNotNull(authorities);
+        assertTrue(authorities.stream().anyMatch(auth -> "GROUP_group1".equals(auth.getAuthority())));
+        assertTrue(authorities.stream().anyMatch(auth -> "GROUP_role1".equals(auth.getAuthority())));
+        verify(perfilService, times(2)).obtenerPerfilPorAzureGroupIdConPermisos(anyString());
     }
 
     @Test
-    void convert_ConPerfilUsuario_DeberiaMapearARoleUser() {
+    void convert_SinGrupos_DeberiaRetornarListaVacia() {
         // Arrange
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("groups", Arrays.asList("user-group-id"))
-                .claim("email", "test@example.com")
-                .claim("name", "Test User")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        when(perfilService.obtenerPerfilPorAzureGroupId("user-group-id"))
-                .thenReturn(Optional.of(perfilUser));
+        when(jwt.getClaimAsStringList("groups")).thenReturn(null);
+        when(jwt.getClaimAsStringList("roles")).thenReturn(null);
+        when(jwt.getClaimAsString("email")).thenReturn("user@test.com");
 
         // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
+        Collection<GrantedAuthority> authorities = converter.convert(jwt);
 
         // Assert
-        assertTrue(result.stream().anyMatch(auth -> "ROLE_USER".equals(auth.getAuthority())));
+        assertNotNull(authorities);
+        assertTrue(authorities.isEmpty());
+        verify(perfilService, never()).obtenerPerfilPorAzureGroupIdConPermisos(anyString());
     }
 
     @Test
-    void convert_ConPerfilGestor_DeberiaMapearARoleManager() {
+    void convert_ConGrupoSinPerfil_DeberiaLogearErrorYContinuar() {
         // Arrange
-        Perfil perfilGestor = new Perfil("Gestor", "Perfil de gestor", "manager-group-id", "Manager Group");
-        perfilGestor.setId(3L);
-        perfilGestor.setActivo(true);
-
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("groups", Arrays.asList("manager-group-id"))
-                .claim("email", "test@example.com")
-                .claim("name", "Test User")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        when(perfilService.obtenerPerfilPorAzureGroupId("manager-group-id"))
-                .thenReturn(Optional.of(perfilGestor));
+        List<String> grupos = Arrays.asList("unknown-group-id");
+        when(jwt.getClaimAsStringList("groups")).thenReturn(grupos);
+        when(jwt.getClaimAsString("email")).thenReturn("user@test.com");
+        
+        when(perfilService.obtenerPerfilPorAzureGroupIdConPermisos("unknown-group-id"))
+                .thenReturn(Optional.empty());
 
         // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
+        Collection<GrantedAuthority> authorities = converter.convert(jwt);
 
         // Assert
-        assertTrue(result.stream().anyMatch(auth -> "ROLE_MANAGER".equals(auth.getAuthority())));
+        assertNotNull(authorities);
+        // Solo debe tener el authority del grupo, sin rol ni permisos
+        assertEquals(1, authorities.size());
+        assertTrue(authorities.stream().anyMatch(auth -> "GROUP_unknown-group-id".equals(auth.getAuthority())));
+        verify(perfilService).obtenerPerfilPorAzureGroupIdConPermisos("unknown-group-id");
     }
 
     @Test
-    void convert_ConPerfilLector_DeberiaMapearARoleReader() {
+    void convert_ConErrorEnServicio_DeberiaManejarExcepcionYContinuar() {
         // Arrange
-        Perfil perfilLector = new Perfil("Lector", "Perfil de lector", "reader-group-id", "Reader Group");
-        perfilLector.setId(4L);
-        perfilLector.setActivo(true);
-
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("groups", Arrays.asList("reader-group-id"))
-                .claim("email", "test@example.com")
-                .claim("name", "Test User")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        when(perfilService.obtenerPerfilPorAzureGroupId("reader-group-id"))
-                .thenReturn(Optional.of(perfilLector));
+        List<String> grupos = Arrays.asList("error-group-id");
+        when(jwt.getClaimAsStringList("groups")).thenReturn(grupos);
+        when(jwt.getClaimAsString("email")).thenReturn("user@test.com");
+        
+        when(perfilService.obtenerPerfilPorAzureGroupIdConPermisos("error-group-id"))
+                .thenThrow(new RuntimeException("Error de base de datos"));
 
         // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
+        Collection<GrantedAuthority> authorities = converter.convert(jwt);
 
         // Assert
-        assertTrue(result.stream().anyMatch(auth -> "ROLE_READER".equals(auth.getAuthority())));
+        assertNotNull(authorities);
+        // Debe continuar y agregar al menos el authority del grupo
+        assertTrue(authorities.stream().anyMatch(auth -> "GROUP_error-group-id".equals(auth.getAuthority())));
+        verify(perfilService).obtenerPerfilPorAzureGroupIdConPermisos("error-group-id");
     }
 
     @Test
-    void convert_ConPerfilPersonalizado_DeberiaMapearARolePersonalizado() {
+    void convert_ConGrupoVacio_DeberiaManejarListaVacia() {
         // Arrange
-        Perfil perfilPersonalizado = new Perfil("Supervisor", "Perfil de supervisor", "supervisor-group-id", "Supervisor Group");
-        perfilPersonalizado.setId(5L);
-        perfilPersonalizado.setActivo(true);
-
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("groups", Arrays.asList("supervisor-group-id"))
-                .claim("email", "test@example.com")
-                .claim("name", "Test User")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        when(perfilService.obtenerPerfilPorAzureGroupId("supervisor-group-id"))
-                .thenReturn(Optional.of(perfilPersonalizado));
+        when(jwt.getClaimAsStringList("groups")).thenReturn(Collections.emptyList());
+        when(jwt.getClaimAsStringList("roles")).thenReturn(null);
+        when(jwt.getClaimAsString("email")).thenReturn("user@test.com");
 
         // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
+        Collection<GrantedAuthority> authorities = converter.convert(jwt);
 
         // Assert
-        assertTrue(result.stream().anyMatch(auth -> "ROLE_SUPERVISOR".equals(auth.getAuthority())));
-    }
-
-    // ========== TESTS PARA EXTRACCIÓN DE GRUPOS ==========
-
-    @Test
-    void convert_ConGruposEnClaimGroups_DeberiaExtraerGrupos() {
-        // Arrange
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("groups", Arrays.asList("group1", "group2"))
-                .claim("email", "test@example.com")
-                .claim("name", "Test User")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        when(perfilService.obtenerPerfilPorAzureGroupId(any())).thenReturn(Optional.empty());
-
-        // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
-
-        // Assert
-        assertTrue(result.stream().anyMatch(auth -> "GROUP_group1".equals(auth.getAuthority())));
-        assertTrue(result.stream().anyMatch(auth -> "GROUP_group2".equals(auth.getAuthority())));
+        assertNotNull(authorities);
+        assertTrue(authorities.isEmpty());
+        verify(perfilService, never()).obtenerPerfilPorAzureGroupIdConPermisos(anyString());
     }
 
     @Test
-    void convert_ConGruposEnClaimRoles_DeberiaExtraerGrupos() {
+    void convert_ConNombrePerfilConEspacios_DeberiaFormatearRolCorrectamente() {
         // Arrange
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("roles", Arrays.asList("role1", "role2"))
-                .claim("email", "test@example.com")
-                .claim("name", "Test User")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        when(perfilService.obtenerPerfilPorAzureGroupId(any())).thenReturn(Optional.empty());
+        Perfil perfilConEspacios = new Perfil("Usuario Avanzado", "Perfil con espacios", "user-advanced-id", "User Advanced Group");
+        perfilConEspacios.setId(2L);
+        
+        when(jwt.getClaimAsStringList("groups")).thenReturn(Arrays.asList("user-advanced-id"));
+        when(jwt.getClaimAsString("email")).thenReturn("user@test.com");
+        
+        when(perfilService.obtenerPerfilPorAzureGroupIdConPermisos("user-advanced-id"))
+                .thenReturn(Optional.of(perfilConEspacios));
 
         // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
+        Collection<GrantedAuthority> authorities = converter.convert(jwt);
 
         // Assert
-        assertTrue(result.stream().anyMatch(auth -> "GROUP_role1".equals(auth.getAuthority())));
-        assertTrue(result.stream().anyMatch(auth -> "GROUP_role2".equals(auth.getAuthority())));
+        assertNotNull(authorities);
+        assertTrue(authorities.stream().anyMatch(auth -> "ROLE_USER_ADVANCED_GROUP".equals(auth.getAuthority())));
+        verify(perfilService).obtenerPerfilPorAzureGroupIdConPermisos("user-advanced-id");
     }
 
     @Test
-    void convert_ConGruposEnAmbosClaims_DeberiaExtraerAmbos() {
+    void convert_ConPermisosInactivos_DeberiaFiltrarPermisosInactivos() {
         // Arrange
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("groups", Arrays.asList("group1"))
-                .claim("roles", Arrays.asList("role1"))
-                .claim("email", "test@example.com")
-                .claim("name", "Test User")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        when(perfilService.obtenerPerfilPorAzureGroupId(any())).thenReturn(Optional.empty());
+        when(jwt.getClaimAsStringList("groups")).thenReturn(Arrays.asList("admin-group-id"));
+        when(jwt.getClaimAsString("email")).thenReturn("admin@test.com");
+        
+        when(perfilService.obtenerPerfilPorAzureGroupIdConPermisos("admin-group-id"))
+                .thenReturn(Optional.of(mockPerfil));
 
         // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
+        Collection<GrantedAuthority> authorities = converter.convert(jwt);
 
         // Assert
-        assertTrue(result.stream().anyMatch(auth -> "GROUP_group1".equals(auth.getAuthority())));
-        assertTrue(result.stream().anyMatch(auth -> "GROUP_role1".equals(auth.getAuthority())));
-    }
-
-    // ========== TESTS PARA EXTRACCIÓN DE EMAIL ==========
-
-    @Test
-    void convert_ConEmailEnClaimEmail_DeberiaExtraerEmail() {
-        // Arrange
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("email", "test@example.com")
-                .claim("name", "Test User")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
-
-        // Assert
-        assertNotNull(result);
-        // El email se usa internamente para determinar el rol por defecto
-        assertTrue(result.stream().anyMatch(auth -> "ROLE_USER".equals(auth.getAuthority())));
+        assertNotNull(authorities);
+        
+        // Verificar permisos activos (usando getNombre())
+        assertTrue(authorities.stream().anyMatch(auth -> "Leer Usuarios".equals(auth.getAuthority())));
+        assertTrue(authorities.stream().anyMatch(auth -> "Crear Usuarios".equals(auth.getAuthority())));
+        
+        // Verificar que NO se incluyó el permiso inactivo
+        assertFalse(authorities.stream().anyMatch(auth -> "Eliminar Usuarios".equals(auth.getAuthority())));
     }
 
     @Test
-    void convert_ConEmailEnClaimPreferredUsername_DeberiaExtraerEmail() {
-        // Arrange
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("preferred_username", "test@example.com")
-                .claim("name", "Test User")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
-
-        // Assert
-        assertNotNull(result);
-        assertTrue(result.stream().anyMatch(auth -> "ROLE_USER".equals(auth.getAuthority())));
+    void convert_ConJwtNull_DeberiaLanzarExcepcion() {
+        // Act & Assert
+        // El método convert tiene @NonNull en el parámetro, pero permitimos null para testing
+        assertThrows(Exception.class, () -> converter.convert(null));
     }
 
-    @Test
-    void convert_ConEmailEnClaimUpn_DeberiaExtraerEmail() {
-        // Arrange
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("upn", "test@example.com")
-                .claim("name", "Test User")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
-
-        // Assert
-        assertNotNull(result);
-        assertTrue(result.stream().anyMatch(auth -> "ROLE_USER".equals(auth.getAuthority())));
-    }
-
-    // ========== TESTS PARA EXTRACCIÓN DE NOMBRE ==========
-
-    @Test
-    void convert_ConNombreEnClaimName_DeberiaExtraerNombre() {
-        // Arrange
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("name", "John Doe")
-                .claim("email", "test@example.com")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
-
-        // Assert
-        assertNotNull(result);
-        // El nombre se usa internamente para logging
-        assertTrue(result.stream().anyMatch(auth -> "ROLE_USER".equals(auth.getAuthority())));
-    }
-
-    @Test
-    void convert_ConNombreEnClaimGivenName_DeberiaExtraerNombre() {
-        // Arrange
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("given_name", "John")
-                .claim("email", "test@example.com")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
-
-        // Assert
-        assertNotNull(result);
-        assertTrue(result.stream().anyMatch(auth -> "ROLE_USER".equals(auth.getAuthority())));
-    }
-
-    @Test
-    void convert_ConNombreEnClaimsGivenNameYFamilyName_DeberiaConcatenarNombres() {
-        // Arrange
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("given_name", "John")
-                .claim("family_name", "Doe")
-                .claim("email", "test@example.com")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
-
-        // Assert
-        assertNotNull(result);
-        assertTrue(result.stream().anyMatch(auth -> "ROLE_USER".equals(auth.getAuthority())));
-    }
-
-    // ========== TESTS PARA MÉTODOS UTILITARIOS ESTÁTICOS ==========
-
-    @Test
-    void getHighestRole_ConRolAdmin_DeberiaRetornarAdministrador() {
-        // Arrange
-        Collection<GrantedAuthority> authorities = Arrays.asList(
-                new SimpleGrantedAuthority("ROLE_ADMIN"),
-                new SimpleGrantedAuthority("ROLE_USER"),
-                new SimpleGrantedAuthority("SCOPE_access_as_user")
-        );
-
-        // Act
-        String result = AzureAdGroupsJwtConverter.getHighestRole(authorities);
-
-        // Assert
-        assertEquals("ADMINISTRADOR", result);
-    }
-
-    @Test
-    void getHighestRole_ConRolManager_DeberiaRetornarGestor() {
-        // Arrange
-        Collection<GrantedAuthority> authorities = Arrays.asList(
-                new SimpleGrantedAuthority("ROLE_MANAGER"),
-                new SimpleGrantedAuthority("ROLE_USER"),
-                new SimpleGrantedAuthority("SCOPE_access_as_user")
-        );
-
-        // Act
-        String result = AzureAdGroupsJwtConverter.getHighestRole(authorities);
-
-        // Assert
-        assertEquals("GESTOR", result);
-    }
-
-    @Test
-    void getHighestRole_ConRolUser_DeberiaRetornarUsuario() {
-        // Arrange
-        Collection<GrantedAuthority> authorities = Arrays.asList(
-                new SimpleGrantedAuthority("ROLE_USER"),
-                new SimpleGrantedAuthority("SCOPE_access_as_user")
-        );
-
-        // Act
-        String result = AzureAdGroupsJwtConverter.getHighestRole(authorities);
-
-        // Assert
-        assertEquals("USUARIO", result);
-    }
-
-    @Test
-    void getHighestRole_ConRolReader_DeberiaRetornarLector() {
-        // Arrange
-        Collection<GrantedAuthority> authorities = Arrays.asList(
-                new SimpleGrantedAuthority("ROLE_READER"),
-                new SimpleGrantedAuthority("SCOPE_access_as_user")
-        );
-
-        // Act
-        String result = AzureAdGroupsJwtConverter.getHighestRole(authorities);
-
-        // Assert
-        assertEquals("LECTOR", result);
-    }
-
-    @Test
-    void getHighestRole_ConRolDesconocido_DeberiaRetornarSinPermisos() {
-        // Arrange
-        Collection<GrantedAuthority> authorities = Arrays.asList(
-                new SimpleGrantedAuthority("ROLE_UNKNOWN"),
-                new SimpleGrantedAuthority("SCOPE_access_as_user")
-        );
-
-        // Act
-        String result = AzureAdGroupsJwtConverter.getHighestRole(authorities);
-
-        // Assert
-        assertEquals("SIN_PERMISOS", result);
-    }
+    // Tests para métodos estáticos utilitarios
 
     @Test
     void hasRole_ConRolExistente_DeberiaRetornarTrue() {
@@ -570,136 +278,191 @@ class AzureAdGroupsJwtConverterTest {
                 new SimpleGrantedAuthority("ROLE_USER")
         );
 
-        // Act
-        boolean result = AzureAdGroupsJwtConverter.hasRole(authorities, "admin");
-
-        // Assert
-        assertTrue(result);
+        // Act & Assert
+        assertTrue(AzureAdGroupsJwtConverter.hasRole(authorities, "admin"));
+        assertTrue(AzureAdGroupsJwtConverter.hasRole(authorities, "ADMIN"));
+        assertTrue(AzureAdGroupsJwtConverter.hasRole(authorities, "user"));
     }
 
     @Test
     void hasRole_ConRolInexistente_DeberiaRetornarFalse() {
         // Arrange
         Collection<GrantedAuthority> authorities = Arrays.asList(
-                new SimpleGrantedAuthority("ROLE_USER")
+                new SimpleGrantedAuthority("ROLE_ADMIN"),
+                new SimpleGrantedAuthority("PERMISO_LEER")
         );
 
-        // Act
-        boolean result = AzureAdGroupsJwtConverter.hasRole(authorities, "admin");
-
-        // Assert
-        assertFalse(result);
+        // Act & Assert
+        assertFalse(AzureAdGroupsJwtConverter.hasRole(authorities, "user"));
+        assertFalse(AzureAdGroupsJwtConverter.hasRole(authorities, "guest"));
     }
 
     @Test
-    void extractAzureGroupIds_ConAuthoritiesValidas_DeberiaExtraerIds() {
+    void hasRole_ConAuthoritiesVacias_DeberiaRetornarFalse() {
+        // Arrange
+        Collection<GrantedAuthority> authorities = Collections.emptyList();
+
+        // Act & Assert
+        assertFalse(AzureAdGroupsJwtConverter.hasRole(authorities, "admin"));
+    }
+
+    @Test
+    void hasRole_ConAuthoritiesNull_DeberiaLanzarExcepcion() {
+        // Act & Assert
+        assertThrows(NullPointerException.class, () -> 
+                AzureAdGroupsJwtConverter.hasRole(null, "admin"));
+    }
+
+    @Test
+    void extractAzureGroupIds_ConGruposValidos_DeberiaExtraerIdsCorrectamente() {
         // Arrange
         Collection<GrantedAuthority> authorities = Arrays.asList(
-                new SimpleGrantedAuthority("GROUP_group1"),
-                new SimpleGrantedAuthority("GROUP_group2"),
-                new SimpleGrantedAuthority("ROLE_USER"),
-                new SimpleGrantedAuthority("SCOPE_access_as_user")
+                new SimpleGrantedAuthority("GROUP_group-123"),
+                new SimpleGrantedAuthority("GROUP_group-456"),
+                new SimpleGrantedAuthority("ROLE_ADMIN"),
+                new SimpleGrantedAuthority("PERMISO_LEER")
         );
 
         // Act
-        List<String> result = AzureAdGroupsJwtConverter.extractAzureGroupIds(authorities);
+        List<String> groupIds = AzureAdGroupsJwtConverter.extractAzureGroupIds(authorities);
 
         // Assert
-        assertEquals(2, result.size());
-        assertTrue(result.contains("group1"));
-        assertTrue(result.contains("group2"));
+        assertNotNull(groupIds);
+        assertEquals(2, groupIds.size());
+        assertTrue(groupIds.contains("group-123"));
+        assertTrue(groupIds.contains("group-456"));
     }
 
     @Test
-    void extractAzureGroupIds_ConAuthoritiesSinGrupos_DeberiaRetornarListaVacia() {
+    void extractAzureGroupIds_SinGrupos_DeberiaRetornarListaVacia() {
         // Arrange
         Collection<GrantedAuthority> authorities = Arrays.asList(
-                new SimpleGrantedAuthority("ROLE_USER"),
-                new SimpleGrantedAuthority("SCOPE_access_as_user")
+                new SimpleGrantedAuthority("ROLE_ADMIN"),
+                new SimpleGrantedAuthority("PERMISO_LEER")
         );
 
         // Act
-        List<String> result = AzureAdGroupsJwtConverter.extractAzureGroupIds(authorities);
+        List<String> groupIds = AzureAdGroupsJwtConverter.extractAzureGroupIds(authorities);
 
         // Assert
-        assertTrue(result.isEmpty());
-    }
-
-    // ========== TESTS PARA CASOS EDGE ==========
-
-    // Test eliminado: convert_ConJwtNull_DeberiaLanzarExcepcion
-    // El método requiere @NonNull Jwt, por lo que no se puede probar con null
-
-    @Test
-    void convert_ConJwtSinClaims_DeberiaManejarGracefully() {
-        // Arrange
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
-
-        // Assert
-        assertNotNull(result);
-        assertTrue(result.stream().anyMatch(auth -> "ROLE_USER".equals(auth.getAuthority())));
-        assertTrue(result.stream().anyMatch(auth -> "SCOPE_access_as_user".equals(auth.getAuthority())));
+        assertNotNull(groupIds);
+        assertTrue(groupIds.isEmpty());
     }
 
     @Test
-    void convert_ConErrorEnPerfilService_DeberiaContinuarSinRol() {
+    void extractAzureGroupIds_ConAuthoritiesVacias_DeberiaRetornarListaVacia() {
         // Arrange
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("groups", Arrays.asList("admin-group-id"))
-                .claim("email", "test@example.com")
-                .claim("name", "Test User")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        when(perfilService.obtenerPerfilPorAzureGroupId("admin-group-id"))
-                .thenThrow(new RuntimeException("Error de base de datos"));
+        Collection<GrantedAuthority> authorities = Collections.emptyList();
 
         // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
+        List<String> groupIds = AzureAdGroupsJwtConverter.extractAzureGroupIds(authorities);
 
         // Assert
-        assertNotNull(result);
-        assertTrue(result.stream().anyMatch(auth -> "GROUP_admin-group-id".equals(auth.getAuthority())));
-        // No se asigna ROLE_USER porque hay grupos presentes, aunque haya error
-        assertTrue(result.stream().anyMatch(auth -> "SCOPE_access_as_user".equals(auth.getAuthority())));
+        assertNotNull(groupIds);
+        assertTrue(groupIds.isEmpty());
     }
 
     @Test
-    void convert_ConPerfilInactivo_DeberiaIgnorarPerfil() {
+    void extractAzureGroupIds_ConAuthoritiesNull_DeberiaLanzarExcepcion() {
+        // Act & Assert
+        assertThrows(NullPointerException.class, () -> 
+                AzureAdGroupsJwtConverter.extractAzureGroupIds(null));
+    }
+
+    // Tests para verificar el comportamiento con diferentes tipos de claims
+
+    @Test
+    void convert_ConEmailEnPreferredUsername_DeberiaExtraerEmailCorrectamente() {
         // Arrange
-        Perfil perfilInactivo = new Perfil("Inactivo", "Perfil inactivo", "inactive-group-id", "Inactive Group");
-        perfilInactivo.setId(6L);
-        perfilInactivo.setActivo(false);
-
-        mockJwt = Jwt.withTokenValue("mock-token")
-                .header("alg", "RS256")
-                .claim("groups", Arrays.asList("inactive-group-id"))
-                .claim("email", "test@example.com")
-                .claim("name", "Test User")
-                .issuedAt(Instant.now())
-                .expiresAt(Instant.now().plusSeconds(3600))
-                .build();
-
-        when(perfilService.obtenerPerfilPorAzureGroupId("inactive-group-id"))
-                .thenReturn(Optional.of(perfilInactivo));
+        when(jwt.getClaimAsStringList("groups")).thenReturn(Arrays.asList("test-group"));
+        when(jwt.getClaimAsString("email")).thenReturn(null);
+        when(jwt.getClaimAsString("preferred_username")).thenReturn("user@example.com");
+        
+        when(perfilService.obtenerPerfilPorAzureGroupIdConPermisos("test-group"))
+                .thenReturn(Optional.empty());
 
         // Act
-        Collection<GrantedAuthority> result = converter.convert(mockJwt);
+        Collection<GrantedAuthority> authorities = converter.convert(jwt);
 
         // Assert
-        assertNotNull(result);
-        assertTrue(result.stream().anyMatch(auth -> "GROUP_inactive-group-id".equals(auth.getAuthority())));
-        // El perfil inactivo genera un rol personalizado basado en su nombre
-        assertTrue(result.stream().anyMatch(auth -> "ROLE_INACTIVO".equals(auth.getAuthority())));
-        assertTrue(result.stream().anyMatch(auth -> "SCOPE_access_as_user".equals(auth.getAuthority())));
+        assertNotNull(authorities);
+        assertTrue(authorities.stream().anyMatch(auth -> "GROUP_test-group".equals(auth.getAuthority())));
+    }
+
+    @Test
+    void convert_ConEmailEnUpn_DeberiaExtraerEmailCorrectamente() {
+        // Arrange
+        when(jwt.getClaimAsStringList("groups")).thenReturn(Arrays.asList("test-group"));
+        when(jwt.getClaimAsString("email")).thenReturn(null);
+        when(jwt.getClaimAsString("preferred_username")).thenReturn(null);
+        when(jwt.getClaimAsString("upn")).thenReturn("user@example.com");
+        
+        when(perfilService.obtenerPerfilPorAzureGroupIdConPermisos("test-group"))
+                .thenReturn(Optional.empty());
+
+        // Act
+        Collection<GrantedAuthority> authorities = converter.convert(jwt);
+
+        // Assert
+        assertNotNull(authorities);
+        assertTrue(authorities.stream().anyMatch(auth -> "GROUP_test-group".equals(auth.getAuthority())));
+    }
+
+    @Test
+    void convert_ConEmailNull_DeberiaManejarEmailVacio() {
+        // Arrange
+        when(jwt.getClaimAsStringList("groups")).thenReturn(Arrays.asList("test-group"));
+        when(jwt.getClaimAsString("email")).thenReturn(null);
+        when(jwt.getClaimAsString("preferred_username")).thenReturn(null);
+        
+        when(perfilService.obtenerPerfilPorAzureGroupIdConPermisos("test-group"))
+                .thenReturn(Optional.empty());
+
+        // Act
+        Collection<GrantedAuthority> authorities = converter.convert(jwt);
+
+        // Assert
+        assertNotNull(authorities);
+        assertTrue(authorities.stream().anyMatch(auth -> "GROUP_test-group".equals(auth.getAuthority())));
+    }
+
+    @Test
+    void convert_ConMultipleGruposYPerfiles_DeberiaProcesarTodos() {
+        // Arrange
+        Perfil perfil2 = new Perfil("Editor", "Perfil de editor", "editor-group-id", "Editor Group");
+        perfil2.setId(2L);
+        perfil2.addPermiso(mockPermiso1);
+        
+        List<String> grupos = Arrays.asList("admin-group-id", "editor-group-id", "unknown-group");
+        when(jwt.getClaimAsStringList("groups")).thenReturn(grupos);
+        when(jwt.getClaimAsString("email")).thenReturn("multi@test.com");
+        
+        when(perfilService.obtenerPerfilPorAzureGroupIdConPermisos("admin-group-id"))
+                .thenReturn(Optional.of(mockPerfil));
+        when(perfilService.obtenerPerfilPorAzureGroupIdConPermisos("editor-group-id"))
+                .thenReturn(Optional.of(perfil2));
+        when(perfilService.obtenerPerfilPorAzureGroupIdConPermisos("unknown-group"))
+                .thenReturn(Optional.empty());
+
+        // Act
+        Collection<GrantedAuthority> authorities = converter.convert(jwt);
+
+        // Assert
+        assertNotNull(authorities);
+        
+        // Verificar grupos
+        assertTrue(authorities.stream().anyMatch(auth -> "GROUP_admin-group-id".equals(auth.getAuthority())));
+        assertTrue(authorities.stream().anyMatch(auth -> "GROUP_editor-group-id".equals(auth.getAuthority())));
+        assertTrue(authorities.stream().anyMatch(auth -> "GROUP_unknown-group".equals(auth.getAuthority())));
+        
+        // Verificar roles
+        assertTrue(authorities.stream().anyMatch(auth -> "ROLE_ADMIN_GROUP".equals(auth.getAuthority())));
+        assertTrue(authorities.stream().anyMatch(auth -> "ROLE_EDITOR_GROUP".equals(auth.getAuthority())));
+        
+        // Verificar permisos (de ambos perfiles) - usando getNombre()
+        assertTrue(authorities.stream().anyMatch(auth -> "Leer Usuarios".equals(auth.getAuthority())));
+        assertTrue(authorities.stream().anyMatch(auth -> "Crear Usuarios".equals(auth.getAuthority())));
+        
+        verify(perfilService, times(3)).obtenerPerfilPorAzureGroupIdConPermisos(anyString());
     }
 }
