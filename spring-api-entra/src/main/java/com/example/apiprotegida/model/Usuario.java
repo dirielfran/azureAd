@@ -31,6 +31,9 @@ public class Usuario {
     @Column(name = "azure_object_id")
     private String azureObjectId;
     
+    @Column(name = "password")
+    private String password; // Para autenticación JWT local
+    
     @Column(name = "fecha_creacion")
     private LocalDateTime fechaCreacion;
     
@@ -100,6 +103,14 @@ public class Usuario {
 
     public void setAzureObjectId(String azureObjectId) {
         this.azureObjectId = azureObjectId;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
     }
 
     public LocalDateTime getFechaCreacion() {

@@ -29,6 +29,14 @@ public class AuthorizationController {
     @GetMapping("/informacion-usuario")
     public ResponseEntity<Map<String, Object>> obtenerInformacionUsuario(Authentication authentication) {
         System.out.println("🔍 [AuthorizationController] Solicitud de información de usuario recibida");
+        
+        // Verificar que la autenticación no sea null
+        if (authentication == null || !authentication.isAuthenticated()) {
+            System.err.println("❌ [AuthorizationController] Usuario no autenticado");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                                .body(createMap("error", "Usuario no autenticado"));
+        }
+        
         System.out.println("👤 [AuthorizationController] Usuario autenticado: " + authentication.getName());
         System.out.println("🔐 [AuthorizationController] Authorities: " + authentication.getAuthorities());
         
@@ -53,6 +61,10 @@ public class AuthorizationController {
      */
     @GetMapping("/permisos")
     public ResponseEntity<List<Permiso>> obtenerPermisosUsuario(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
         try {
             List<Permiso> permisos = authorizationService.obtenerPermisosUsuario(authentication);
             return ResponseEntity.ok(permisos);
@@ -66,6 +78,10 @@ public class AuthorizationController {
      */
     @GetMapping("/codigos-permisos")
     public ResponseEntity<Set<String>> obtenerCodigosPermisos(Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        
         try {
             Set<String> codigosPermisos = authorizationService.obtenerCodigosPermisosUsuario(authentication);
             return ResponseEntity.ok(codigosPermisos);
@@ -81,6 +97,11 @@ public class AuthorizationController {
     public ResponseEntity<Map<String, Boolean>> tienePermiso(
             @PathVariable String codigoPermiso, 
             Authentication authentication) {
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                                .body(createBooleanMap("tienePermiso", false));
+        }
+        
         try {
             boolean tienePermiso = authorizationService.tienePermiso(authentication, codigoPermiso);
             return ResponseEntity.ok(createBooleanMap("tienePermiso", tienePermiso));

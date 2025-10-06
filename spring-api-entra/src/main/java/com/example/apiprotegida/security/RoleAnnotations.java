@@ -49,20 +49,22 @@ public class RoleAnnotations {
     }
 
     /**
-     * Permite acceso solo a usuarios con scope access_as_user
+     * Permite acceso a usuarios con scope access_as_user (Azure AD) 
+     * O con permisos de usuarios locales (JWT)
      */
     @Target(ElementType.METHOD)
     @Retention(RetentionPolicy.RUNTIME)
-    @PreAuthorize("hasAuthority('SCOPE_access_as_user')")
+    @PreAuthorize("hasAuthority('SCOPE_access_as_user') or hasAnyAuthority('USUARIOS_LEER', 'DASHBOARD_LEER', 'ADMIN')")
     public @interface ValidScope {
     }
 
     /**
      * Combinación de scope válido y cualquier rol válido
+     * Compatible con Azure AD y JWT local
      */
     @Target(ElementType.METHOD)
     @Retention(RetentionPolicy.RUNTIME)
-    @PreAuthorize("hasAuthority('SCOPE_access_as_user') and hasAnyRole('ADMIN', 'MANAGER', 'USER', 'READER')")
+    @PreAuthorize("(hasAuthority('SCOPE_access_as_user') or hasAnyAuthority('USUARIOS_LEER', 'DASHBOARD_LEER')) and hasAnyRole('ADMIN', 'MANAGER', 'USER', 'READER')")
     public @interface ValidScopeAndRole {
     }
 }

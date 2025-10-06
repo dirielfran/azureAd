@@ -7,14 +7,22 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import com.example.apiprotegida.security.filter.DualAuthenticationFilter;
 
 import java.util.Arrays;
 
@@ -41,6 +49,9 @@ public class SecurityConfig {
     @Autowired
     private AzureAdGroupsJwtConverter azureAdGroupsJwtConverter;
 
+    @Autowired
+    private DualAuthenticationFilter dualAuthenticationFilter;
+
     /**
      * Configuración principal de seguridad
      */
@@ -60,7 +71,8 @@ public class SecurityConfig {
                     "/actuator/**",
                     "/h2-console/**",
                     "/public/**",
-                    "/auth/info"
+                    "/auth/info",
+                    "/auth/login"
                 ).permitAll()
                 
                 // Todos los demás endpoints requieren autenticación
@@ -68,12 +80,17 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
             )
             
-            // Configurar OAuth2 Resource Server con JWT
+            // Configurar OAuth2 Resource Server con JWT (para Azure AD)
             .oauth2ResourceServer(oauth2 -> oauth2
+                .bearerTokenResolver(customBearerTokenResolver())
                 .jwt(jwt -> jwt
                     .jwtAuthenticationConverter(jwtAuthenticationConverter())
                 )
             )
+            
+            // Agregar filtro dual (maneja tanto Azure AD como JWT local)
+            // Debe estar ANTES del BearerTokenAuthenticationFilter para procesar JWT locales
+            .addFilterBefore(dualAuthenticationFilter, org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter.class)
             
             // Configurar sesiones como stateless
             .sessionManagement(session -> session
@@ -132,5 +149,40 @@ public class SecurityConfig {
     @Bean
     public JwtDecoder jwtDecoder() {
         return NimbusJwtDecoder.withIssuerLocation(issuerUri).build();
+    }
+
+    /**
+     * Encoder de contraseñas para usuarios locales
+     */
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    /**
+     * BearerTokenResolver personalizado que ignora tokens JWT locales ya procesados
+     */
+    @Bean
+    public BearerTokenResolver customBearerTokenResolver() {
+        DefaultBearerTokenResolver resolver = new DefaultBearerTokenResolver();
+        
+        return new BearerTokenResolver() {
+            @Override
+            public String resolve(HttpServletRequest request) {
+                // Si ya se procesó un token JWT local, no resolver el token aquí
+                if (request.getAttribute("JWT_LOCAL_PROCESSED") != null) {
+                    return null;
+                }
+                
+                // Si ya hay autenticación establecida (por el filtro dual), no procesar
+                if (SecurityContextHolder.getContext().getAuthentication() != null && 
+                    SecurityContextHolder.getContext().getAuthentication().isAuthenticated()) {
+                    return null;
+                }
+                
+                // De lo contrario, usar el resolver por defecto para tokens de Azure AD
+                return resolver.resolve(request);
+            }
+        };
     }
 }

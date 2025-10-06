@@ -6,76 +6,76 @@
 -- 1. PERMISOS DEL SISTEMA
 -- -----------------------------------------------------------------------------
 -- Permisos para el módulo USUARIOS
-INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('USUARIOS_LEER', 'Ver Usuarios', 'Permite ver la lista de usuarios', 'USUARIOS', 'LEER', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('USUARIOS_CREAR', 'Crear Usuarios', 'Permite crear nuevos usuarios', 'USUARIOS', 'CREAR', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('USUARIOS_EDITAR', 'Editar Usuarios', 'Permite modificar usuarios existentes', 'USUARIOS', 'EDITAR', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('USUARIOS_ELIMINAR', 'Eliminar Usuarios', 'Permite eliminar usuarios', 'USUARIOS', 'ELIMINAR', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- Permisos para el módulo REPORTES
-INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('REPORTES_LEER', 'Ver Reportes', 'Permite ver reportes del sistema', 'REPORTES', 'LEER', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('REPORTES_CREAR', 'Crear Reportes', 'Permite crear nuevos reportes', 'REPORTES', 'CREAR', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('REPORTES_EXPORTAR', 'Exportar Reportes', 'Permite exportar reportes', 'REPORTES', 'EXPORTAR', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- Permisos para el módulo CONFIGURACION
-INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('CONFIG_LEER', 'Ver Configuración', 'Permite ver configuración del sistema', 'CONFIGURACION', 'LEER', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('CONFIG_EDITAR', 'Editar Configuración', 'Permite modificar configuración del sistema', 'CONFIGURACION', 'EDITAR', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- Permisos para el módulo PERFILES
-INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('PERFILES_LEER', 'Ver Perfiles', 'Permite ver perfiles y roles', 'PERFILES', 'LEER', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('PERFILES_CREAR', 'Crear Perfiles', 'Permite crear nuevos perfiles', 'PERFILES', 'CREAR', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('PERFILES_EDITAR', 'Editar Perfiles', 'Permite modificar perfiles existentes', 'PERFILES', 'EDITAR', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('PERFILES_ELIMINAR', 'Eliminar Perfiles', 'Permite eliminar perfiles', 'PERFILES', 'ELIMINAR', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- Permisos para el módulo DASHBOARD
-INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('DASHBOARD_LEER', 'Ver Dashboard', 'Permite acceso al dashboard principal', 'DASHBOARD', 'LEER', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO permisos (codigo, nombre, descripcion, modulo, accion, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('DASHBOARD_ADMIN', 'Dashboard Administrador', 'Acceso completo al dashboard de administrador', 'DASHBOARD', 'ADMIN', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- -----------------------------------------------------------------------------
 -- 2. PERFILES DEL SISTEMA (asociados a grupos de Azure AD)
 -- -----------------------------------------------------------------------------
 -- PERFIL ADMINISTRADOR
-INSERT INTO perfiles (nombre, descripcion, azure_group_id, azure_group_name, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO perfiles (nombre, descripcion, azure_group_id, azure_group_name, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('Administrador', 'Acceso completo al sistema', 'bdff3193-e802-41d9-a5c6-edc6fb0db732', 'Administradores Azure', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- PERFIL GESTOR
-INSERT INTO perfiles (nombre, descripcion, azure_group_id, azure_group_name, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO perfiles (nombre, descripcion, azure_group_id, azure_group_name, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('Gestor', 'Acceso de gestión con permisos limitados', 'manager-group-id-456', 'Gestores', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- PERFIL USUARIO ESTANDAR
-INSERT INTO perfiles (nombre, descripcion, azure_group_id, azure_group_name, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO perfiles (nombre, descripcion, azure_group_id, azure_group_name, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('Usuario', 'Usuario estándar con permisos básicos', '1ae2b90c-5c46-4639-84d0-809d66cdd809', 'Usuarios Azure', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- PERFIL SOLO LECTURA
-INSERT INTO perfiles (nombre, descripcion, azure_group_id, azure_group_name, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO perfiles (nombre, descripcion, azure_group_id, azure_group_name, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('Lector', 'Solo permisos de lectura', 'reader-group-id-101', 'Lectores', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- Perfil por defecto para usuarios sin grupos específicos
-INSERT INTO perfiles (nombre, descripcion, azure_group_id, azure_group_name, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO perfiles (nombre, descripcion, azure_group_id, azure_group_name, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('Usuario Básico', 'Perfil por defecto para usuarios autenticados', 'default-user', 'Usuarios Básicos', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 -- -----------------------------------------------------------------------------
@@ -131,32 +131,46 @@ INSERT INTO perfil_permisos (perfil_id, permiso_id) VALUES (5, 14); -- DASHBOARD
 -- -----------------------------------------------------------------------------
 -- 4. DATOS DE EJEMPLO PARA LA TABLA USUARIOS
 -- -----------------------------------------------------------------------------
-INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion) 
+-- Usuarios con Azure AD (sin contraseña local)
+INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('Juan Pérez', 'juan.perez@empresa.com', 'azure-obj-id-1', 'Desarrollo', 'Desarrollador Senior', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('María García', 'maria.garcia@empresa.com', 'azure-obj-id-2', 'Diseño', 'Diseñadora UX', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('Carlos López', 'carlos.lopez@empresa.com', 'azure-obj-id-3', 'Marketing', 'Especialista en Marketing', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('Ana Rodríguez', 'ana.rodriguez@empresa.com', 'azure-obj-id-4', 'Desarrollo', 'Desarrolladora Frontend', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('Luis Martínez', 'luis.martinez@empresa.com', 'azure-obj-id-5', 'Operaciones', 'Gerente de Operaciones', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('Sofia Hernández', 'sofia.hernandez@empresa.com', 'azure-obj-id-6', 'Recursos Humanos', 'Coordinadora de RRHH', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('Diego Torres', 'diego.torres@empresa.com', 'azure-obj-id-7', 'Desarrollo', 'Arquitecto de Software', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('Lucía Morales', 'lucia.morales@empresa.com', 'azure-obj-id-8', 'Finanzas', 'Analista Financiero', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('Roberto Silva', 'roberto.silva@empresa.com', 'azure-obj-id-9', 'Ventas', 'Ejecutivo de Ventas', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
-INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion) 
+INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('Carmen Jiménez', 'carmen.jimenez@empresa.com', 'azure-obj-id-10', 'Marketing', 'Coordinadora de Marketing', false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+-- Usuarios locales con contraseñas (para autenticación JWT)
+-- CREDENCIALES PARA TESTING:
+-- Email: admin@local.com | Password: admin123
+-- Hash BCrypt válido de "admin123" generado con strength 10
+INSERT INTO usuarios (nombre, email, password, departamento, cargo, activo, fecha_creacion, fecha_actualizacion)
+VALUES ('Admin Local', 'admin@local.com', '$2a$10$4l09Pef/P.mBHEsn55Hcj.wPYOGTs4a2H3IfEKSoO1nT8O6yg/LIm', 'IT', 'Administrador', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO usuarios (nombre, email, password, departamento, cargo, activo, fecha_creacion, fecha_actualizacion)
+VALUES ('Usuario Local', 'user@local.com', '$2a$10$4l09Pef/P.mBHEsn55Hcj.wPYOGTs4a2H3IfEKSoO1nT8O6yg/LIm', 'Ventas', 'Vendedor', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO usuarios (nombre, email, password, departamento, cargo, activo, fecha_creacion, fecha_actualizacion)
+VALUES ('Invitado Local', 'guest@local.com', '$2a$10$4l09Pef/P.mBHEsn55Hcj.wPYOGTs4a2H3IfEKSoO1nT8O6yg/LIm', 'Soporte', 'Soporte Técnico', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);

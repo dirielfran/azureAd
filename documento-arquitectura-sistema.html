@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arquitectura del Sistema - Angular + Spring Boot + Azure AD</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 40px;
+            color: #333;
+            background-color: #ffffff;
+        }
+        
+        h1 {
+            color: #1976d2;
+            border-bottom: 3px solid #1976d2;
+            padding-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        h2 {
+            color: #7b1fa2;
+            border-left: 4px solid #7b1fa2;
+            padding-left: 15px;
+            margin-top: 30px;
+            font-size: 22px;
+        }
+        
+        h3 {
+            color: #388e3c;
+            margin-top: 25px;
+            font-size: 18px;
+        }
+        
+        h4 {
+            color: #f57c00;
+            margin-top: 20px;
+            font-size: 16px;
+        }
+        
+        .phase {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .phase h3 {
+            color: #1976d2;
+            margin-top: 0;
+        }
+        
+        .step {
+            background-color: #ffffff;
+            border-left: 4px solid #1976d2;
+            padding: 15px;
+            margin: 10px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .component-box {
+            background-color: #e3f2fd;
+            border: 1px solid #1976d2;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .flow-diagram {
+            background-color: #f5f5f5;
+            border: 2px solid #666;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .security-layer {
+            background-color: #fff3e0;
+            border: 1px solid #f57c00;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .use-case {
+            background-color: #e8f5e8;
+            border: 1px solid #388e3c;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        ul, ol {
+            padding-left: 25px;
+        }
+        
+        li {
+            margin: 8px 0;
+        }
+        
+        .highlight {
+            background-color: #fff59d;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+        
+        .icon {
+            font-size: 18px;
+            margin-right: 8px;
+        }
+        
+        .page-break {
+            page-break-before: always;
+        }
+        
+        @media print {
+            body {
+                margin: 20px;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<h1><span class="icon">🏗️</span>Arquitectura del Sistema - Angular + Spring Boot + Azure AD</h1>
+
+<h2>📋 Explicación Detallada del Flujo de Arquitectura del Sistema</h2>
+
+<div class="phase">
+    <h3><span class="icon">🔐</span>Fase 1: Inicialización y Autenticación</h3>
+    
+    <div class="step">
+        <h4>1. Usuario accede a la aplicación Angular</h4>
+        <ul>
+            <li>El usuario abre el navegador y navega a la aplicación</li>
+            <li>El <span class="highlight">AppComponent</span> detecta que no hay sesión activa</li>
+            <li>Se inicializa el sistema de autenticación MSAL (Microsoft Authentication Library)</li>
+        </ul>
+    </div>
+    
+    <div class="step">
+        <h4>2. Redirección a Azure AD</h4>
+        <ul>
+            <li>El sistema redirige automáticamente al usuario a Microsoft Entra ID (Azure AD)</li>
+            <li>El usuario ingresa sus credenciales corporativas</li>
+            <li>Azure AD valida la identidad del usuario</li>
+        </ul>
+    </div>
+    
+    <div class="step">
+        <h4>3. Azure AD procesa la autenticación</h4>
+        <ul>
+            <li>Azure AD valida las credenciales del usuario</li>
+            <li>Consulta los grupos de seguridad a los que pertenece el usuario</li>
+            <li>Genera un <span class="highlight">JWT (JSON Web Token)</span> que incluye:
+                <ul>
+                    <li>Información del usuario (nombre, email, ID)</li>
+                    <li>Lista de grupos de seguridad de Azure AD</li>
+                    <li>Información de expiración y firma digital</li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div class="phase">
+    <h3><span class="icon">🔄</span>Fase 2: Procesamiento del Token</h3>
+    
+    <div class="step">
+        <h4>4. Angular recibe el token</h4>
+        <ul>
+            <li>El <span class="highlight">MSAL Interceptor</span> captura automáticamente el token</li>
+            <li>Almacena el token de forma segura en el navegador (localStorage/sessionStorage)</li>
+            <li>El <span class="highlight">AuthorizationService</span> se inicializa con la información del usuario</li>
+        </ul>
+    </div>
+    
+    <div class="step">
+        <h4>5. Solicitud de permisos al backend</h4>
+        <ul>
+            <li>Angular envía una petición HTTP al endpoint <span class="highlight">/api/auth/permissions</span></li>
+            <li>El MSAL Interceptor agrega automáticamente el token JWT en el header <span class="highlight">Authorization</span></li>
+            <li>Se incluye el formato: <code>Bearer [token_jwt]</code></li>
+        </ul>
+    </div>
+</div>
+
+<div class="phase">
+    <h3><span class="icon">🚀</span>Fase 3: Validación en el Backend</h3>
+    
+    <div class="step">
+        <h4>6. Spring Boot recibe y valida el token</h4>
+        <ul>
+            <li>El <span class="highlight">AuthController</span> recibe la petición con el token JWT</li>
+            <li><span class="highlight">SecurityConfig</span> valida la firma y expiración del token</li>
+            <li><span class="highlight">AzureAdGroupsJwtConverter</span> extrae los grupos de Azure AD del token</li>
+            <li>Se verifica que el token no haya sido modificado (integridad)</li>
+        </ul>
+    </div>
+    
+    <div class="step">
+        <h4>7. Mapeo de grupos a perfiles del sistema</h4>
+        <ul>
+            <li>El sistema consulta la base de datos para encontrar perfiles que coincidan con los grupos de Azure AD</li>
+            <li>Ejemplos de mapeo:
+                <ul>
+                    <li>Grupo "Administradores" → Perfil "admin" del sistema</li>
+                    <li>Grupo "Usuarios" → Perfil "user" del sistema</li>
+                    <li>Grupo "Gestores" → Perfil "manager" del sistema</li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div class="phase">
+    <h3><span class="icon">💾</span>Fase 4: Consulta de Permisos</h3>
+    
+    <div class="step">
+        <h4>8. Base de datos procesa la consulta</h4>
+        <ul>
+            <li>Se consulta la tabla <span class="highlight">perfiles</span> para obtener el perfil del usuario</li>
+            <li>Se consulta la tabla <span class="highlight">perfil_permisos</span> para obtener los permisos asociados</li>
+            <li>Se consulta la tabla <span class="highlight">permisos</span> para obtener los detalles de cada permiso</li>
+            <li>Se ejecuta una consulta SQL optimizada que une las tres tablas</li>
+        </ul>
+    </div>
+    
+    <div class="step">
+        <h4>9. Retorno de información de permisos</h4>
+        <ul>
+            <li>La base de datos retorna una lista estructurada de permisos</li>
+            <li>El backend formatea esta información en un JSON claro</li>
+            <li>Se incluyen metadatos como fecha de consulta y versión de permisos</li>
+        </ul>
+    </div>
+</div>
+
+<div class="phase">
+    <h3><span class="icon">🌐</span>Fase 5: Actualización de la Interfaz</h3>
+    
+    <div class="step">
+        <h4>10. Angular procesa la respuesta</h4>
+        <ul>
+            <li>El <span class="highlight">AuthorizationService</span> recibe los permisos del usuario</li>
+            <li>Actualiza el estado interno de permisos</li>
+            <li>Notifica a todos los componentes suscritos mediante observables</li>
+            <li>Se almacena en caché para optimizar rendimiento</li>
+        </ul>
+    </div>
+    
+    <div class="step">
+        <h4>11. Componentes actualizan la UI</h4>
+        <ul>
+            <li><span class="highlight">UserPermissionsComponent</span> muestra el dashboard de permisos</li>
+            <li><span class="highlight">ProtectedDataComponent</span> habilita/deshabilita funcionalidades según permisos</li>
+            <li>Los <span class="highlight">Guards</span> permiten o bloquean el acceso a rutas</li>
+            <li>Las <span class="highlight">Directives</span> muestran/ocultan elementos en la interfaz</li>
+        </ul>
+    </div>
+</div>
+
+<div class="page-break"></div>
+
+<h2>🔄 Interacciones Entre Componentes</h2>
+
+<div class="flow-diagram">
+    <h3>Flujo de Datos en Tiempo Real</h3>
+    <p><strong>Usuario → Azure AD → JWT Token → Angular → Spring Boot → Base de Datos → Permisos → UI</strong></p>
+</div>
+
+<h3>Componentes Clave y sus Responsabilidades</h3>
+
+<div class="component-box">
+    <h4><span class="icon">📨</span>MSAL Interceptor</h4>
+    <p>El "mensajero automático" que agrega tokens a todas las peticiones HTTP de forma transparente para el desarrollador.</p>
+</div>
+
+<div class="component-box">
+    <h4><span class="icon">🎯</span>AuthorizationService</h4>
+    <p>El "coordinador central" que gestiona todos los permisos, mantiene el estado de autorización y notifica cambios a los componentes.</p>
+</div>
+
+<div class="component-box">
+    <h4><span class="icon">🔄</span>AzureAdGroupsJwtConverter</h4>
+    <p>El "traductor" que convierte grupos de Azure AD a roles del sistema interno, permitiendo la integración entre ambos sistemas.</p>
+</div>
+
+<div class="component-box">
+    <h4><span class="icon">🛡️</span>Guards & Directives</h4>
+    <p>Los "guardianes" que protegen rutas y elementos de la UI, asegurando que solo usuarios autorizados accedan a funcionalidades específicas.</p>
+</div>
+
+<h2>🎯 Casos de Uso Típicos</h2>
+
+<div class="use-case">
+    <h3><span class="icon">👑</span>Escenario 1: Usuario Administrador</h3>
+    <ol>
+        <li>Se autentica con credenciales de administrador</li>
+        <li>Tiene grupo "Administradores" en Azure AD</li>
+        <li>Obtiene perfil "admin" en el sistema</li>
+        <li>Ve todas las funcionalidades disponibles</li>
+        <li>Puede acceder a todas las rutas protegidas</li>
+    </ol>
+</div>
+
+<div class="use-case">
+    <h3><span class="icon">👤</span>Escenario 2: Usuario Regular</h3>
+    <ol>
+        <li>Se autentica con credenciales de usuario</li>
+        <li>Tiene grupo "Usuarios" en Azure AD</li>
+        <li>Obtiene perfil "user" en el sistema</li>
+        <li>Ve funcionalidades limitadas según sus permisos</li>
+        <li>No puede acceder a rutas de administración</li>
+    </ol>
+</div>
+
+<div class="use-case">
+    <h3><span class="icon">🚫</span>Escenario 3: Usuario sin Permisos</h3>
+    <ol>
+        <li>Se autentica correctamente en Azure AD</li>
+        <li>No tiene grupos válidos en Azure AD</li>
+        <li>No obtiene permisos en el sistema</li>
+        <li>Ve página de acceso denegado</li>
+        <li>No puede acceder a ninguna funcionalidad protegida</li>
+    </ol>
+</div>
+
+<div class="page-break"></div>
+
+<h2>🔒 Seguridad en Cada Capa</h2>
+
+<div class="security-layer">
+    <h3><span class="icon">🌐</span>Frontend (Angular)</h3>
+    <ul>
+        <li>Tokens almacenados de forma segura (no en variables globales)</li>
+        <li>Validación de permisos antes de mostrar elementos de UI</li>
+        <li>Interceptores HTTP que agregan automáticamente tokens</li>
+        <li>Guards que protegen rutas sensibles</li>
+        <li>Directivas que controlan la visibilidad de elementos</li>
+    </ul>
+</div>
+
+<div class="security-layer">
+    <h3><span class="icon">☁️</span>Azure AD (Microsoft Entra ID)</h3>
+    <ul>
+        <li>Autenticación robusta con múltiples factores</li>
+        <li>Gestión centralizada de identidades</li>
+        <li>Tokens JWT firmados digitalmente</li>
+        <li>Control de acceso basado en grupos</li>
+        <li>Auditoría completa de accesos</li>
+    </ul>
+</div>
+
+<div class="security-layer">
+    <h3><span class="icon">🚀</span>Backend (Spring Boot)</h3>
+    <ul>
+        <li>Validación estricta de tokens JWT</li>
+        <li>Autorización granular por endpoint</li>
+        <li>Configuración de seguridad centralizada</li>
+        <li>Conversión segura de grupos a roles</li>
+        <li>Logging de todas las operaciones sensibles</li>
+    </ul>
+</div>
+
+<div class="security-layer">
+    <h3><span class="icon">💾</span>Base de Datos (H2)</h3>
+    <ul>
+        <li>Estructura relacional que garantiza integridad de permisos</li>
+        <li>Relaciones many-to-many entre perfiles y permisos</li>
+        <li>Consultas optimizadas para validación de permisos</li>
+        <li>Transacciones ACID para mantener consistencia</li>
+        <li>Índices en campos críticos para rendimiento</li>
+    </ul>
+</div>
+
+<h2>📊 Diagrama de Flujo de Arquitectura</h2>
+
+<div class="flow-diagram">
+    <h3>Arquitectura del Sistema</h3>
+    <pre>
+┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
+│   🌐 Frontend   │    │   ☁️ Microsoft    │    │  🚀 Backend     │
+│    Angular      │    │    Entra ID      │    │  Spring Boot    │
+│                 │    │                  │    │                 │
+│ • AppComponent  │◄──►│ • Azure AD       │◄──►│ • AuthController│
+│ • Authorization │    │ • Grupos Seg.    │    │ • Authorization │
+│   Service       │    │ • JWT Tokens     │    │   Controller    │
+│ • MSAL Interc.  │    │                  │    │ • SecurityConfig│
+│ • Guards        │    │                  │    │ • JWT Converter │
+└─────────────────┘    └──────────────────┘    └─────────────────┘
+         │                                               │
+         │                                               ▼
+         │                                    ┌─────────────────┐
+         │                                    │  💾 Base Datos  │
+         │                                    │      H2         │
+         │                                    │                 │
+         └────────────────────────────────────►│ • usuarios      │
+                                              │ • perfiles      │
+                                              │ • permisos      │
+                                              │ • perfil_permisos│
+                                              └─────────────────┘
+    </pre>
+</div>
+
+<h2>✅ Beneficios de esta Arquitectura</h2>
+
+<ul>
+    <li><strong>Seguridad Robusta:</strong> Múltiples capas de validación y autorización</li>
+    <li><strong>Escalabilidad:</strong> Separación clara de responsabilidades entre capas</li>
+    <li><strong>Mantenibilidad:</strong> Código organizado y componentes reutilizables</li>
+    <li><strong>Integración:</strong> Seamless integration con ecosistema Microsoft</li>
+    <li><strong>Auditoría:</strong> Trazabilidad completa de accesos y permisos</li>
+    <li><strong>Flexibilidad:</strong> Fácil adición de nuevos permisos y roles</li>
+</ul>
+
+<h2>🔧 Consideraciones Técnicas</h2>
+
+<h3>Rendimiento</h3>
+<ul>
+    <li>Caché de permisos en el frontend para evitar consultas repetidas</li>
+    <li>Tokens JWT con tiempo de vida optimizado</li>
+    <li>Consultas SQL optimizadas con índices apropiados</li>
+</ul>
+
+<h3>Disponibilidad</h3>
+<ul>
+    <li>Fallback a permisos básicos en caso de error de conexión</li>
+    <li>Manejo graceful de errores de autenticación</li>
+    <li>Retry automático en fallos de red</li>
+</ul>
+
+<h3>Monitoreo</h3>
+<ul>
+    <li>Logging detallado de operaciones de autenticación</li>
+    <li>Métricas de rendimiento de validación de tokens</li>
+    <li>Alertas por intentos de acceso no autorizado</li>
+</ul>
+
+<div class="page-break"></div>
+
+<h2>📝 Conclusiones</h2>
+
+<p>Esta arquitectura proporciona una solución robusta y escalable para la gestión de autenticación y autorización en aplicaciones empresariales. La integración con Microsoft Entra ID permite aprovechar la infraestructura de identidades existente, mientras que la separación en capas garantiza la mantenibilidad y seguridad del sistema.</p>
+
+<p>El flujo descrito asegura que cada usuario vea solo las funcionalidades que tiene permitidas, manteniendo la seguridad en todas las capas y proporcionando una experiencia de usuario fluida y segura.</p>
+
+<hr>
+<p><em>Documento generado automáticamente - Sistema de Autenticación Angular + Spring Boot + Azure AD</em></p>
+<p><em>Fecha: ${new Date().toLocaleDateString('es-ES')}</em></p>
+
+</body>
+</html>
