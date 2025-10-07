@@ -72,7 +72,10 @@ public class SecurityConfig {
                     "/h2-console/**",
                     "/public/**",
                     "/auth/info",
-                    "/auth/login"
+                    "/auth/login",
+                    "/auth/generate-hash-temp",
+                    "/config/auth/status",
+                    "/config/auth/config/admin"  // Endpoint seguro con token de administrador
                 ).permitAll()
                 
                 // Todos los demás endpoints requieren autenticación

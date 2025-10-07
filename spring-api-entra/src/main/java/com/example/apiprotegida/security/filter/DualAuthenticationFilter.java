@@ -1,6 +1,7 @@
 package com.example.apiprotegida.security.filter;
 
 import com.example.apiprotegida.security.JWTTokenProvider;
+import com.example.apiprotegida.service.ConfiguracionService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,6 +29,9 @@ public class DualAuthenticationFilter extends OncePerRequestFilter {
 
     @Autowired
     private JWTTokenProvider jwtTokenProvider;
+    
+    @Autowired
+    private ConfiguracionService configuracionService;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
@@ -44,12 +48,30 @@ public class DualAuthenticationFilter extends OncePerRequestFilter {
                 
                 // Determinar si es un token JWT local o de Azure AD
                 if (isLocalJwtToken(token)) {
+                    // Verificar si JWT local está habilitado
+                    if (!configuracionService.esJwtLocalHabilitado()) {
+                        log.warn("⚠️ Token JWT local detectado pero JWT local está DESHABILITADO en la configuración");
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.getWriter().write("{\"error\":\"Autenticación JWT local deshabilitada\"}");
+                        response.setContentType("application/json");
+                        return;
+                    }
+                    
                     log.debug("Token JWT local detectado, procesando...");
                     processLocalJwtToken(token, request);
                     
                     // Marcar que ya procesamos este token para que BearerTokenAuthenticationFilter lo ignore
                     request.setAttribute("JWT_LOCAL_PROCESSED", true);
                 } else {
+                    // Verificar si Azure AD está habilitado
+                    if (!configuracionService.esAzureAdHabilitado()) {
+                        log.warn("⚠️ Token Azure AD detectado pero Azure AD está DESHABILITADO en la configuración");
+                        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                        response.getWriter().write("{\"error\":\"Autenticación Azure AD deshabilitada\"}");
+                        response.setContentType("application/json");
+                        return;
+                    }
+                    
                     log.debug("Token Azure AD detectado, delegando a OAuth2 Resource Server...");
                     // No hacer nada aquí, dejar que el OAuth2 Resource Server procese el token de Azure AD
                 }

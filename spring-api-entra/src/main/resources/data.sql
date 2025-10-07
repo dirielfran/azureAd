@@ -162,15 +162,43 @@ VALUES ('Roberto Silva', 'roberto.silva@empresa.com', 'azure-obj-id-9', 'Ventas'
 INSERT INTO usuarios (nombre, email, azure_object_id, departamento, cargo, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('Carmen Jiménez', 'carmen.jimenez@empresa.com', 'azure-obj-id-10', 'Marketing', 'Coordinadora de Marketing', false, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
--- Usuarios locales con contraseñas (para autenticación JWT)
+-- ============================================
+-- CONFIGURACION DEL SISTEMA
+-- ============================================
+
+-- Configuraciones de autenticación
+INSERT INTO configuracion_sistema (clave, valor, descripcion, tipo, categoria, activo, fecha_creacion, fecha_actualizacion)
+VALUES ('auth.azure.enabled', 'true', 'Habilita/deshabilita autenticación con Azure AD', 'BOOLEAN', 'AUTENTICACION', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO configuracion_sistema (clave, valor, descripcion, tipo, categoria, activo, fecha_creacion, fecha_actualizacion)
+VALUES ('auth.jwt.local.enabled', 'true', 'Habilita/deshabilita autenticación JWT con usuarios locales', 'BOOLEAN', 'AUTENTICACION', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO configuracion_sistema (clave, valor, descripcion, tipo, categoria, activo, fecha_creacion, fecha_actualizacion)
+VALUES ('auth.require.mfa', 'false', 'Requiere autenticación multifactor', 'BOOLEAN', 'AUTENTICACION', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO configuracion_sistema (clave, valor, descripcion, tipo, categoria, activo, fecha_creacion, fecha_actualizacion)
+VALUES ('auth.session.timeout', '3600', 'Timeout de sesión en segundos', 'NUMBER', 'AUTENTICACION', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+-- Configuraciones generales
+INSERT INTO configuracion_sistema (clave, valor, descripcion, tipo, categoria, activo, fecha_creacion, fecha_actualizacion)
+VALUES ('sistema.nombre', 'API Protegida', 'Nombre del sistema', 'STRING', 'GENERAL', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+INSERT INTO configuracion_sistema (clave, valor, descripcion, tipo, categoria, activo, fecha_creacion, fecha_actualizacion)
+VALUES ('sistema.version', '1.0.0', 'Versión del sistema', 'STRING', 'GENERAL', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+-- ============================================
+-- USUARIOS LOCALES (para autenticación JWT)
+-- ============================================
+
 -- CREDENCIALES PARA TESTING:
 -- Email: admin@local.com | Password: admin123
 -- Hash BCrypt válido de "admin123" generado con strength 10
+-- NOTA: Este hash será reemplazado por el generado dinámicamente
 INSERT INTO usuarios (nombre, email, password, departamento, cargo, activo, fecha_creacion, fecha_actualizacion)
-VALUES ('Admin Local', 'admin@local.com', '$2a$10$4l09Pef/P.mBHEsn55Hcj.wPYOGTs4a2H3IfEKSoO1nT8O6yg/LIm', 'IT', 'Administrador', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+VALUES ('Admin Local', 'admin@local.com', '$2a$10$9atsLDAx.xeTg030ObkVzeVurW.DGJDSYPPUslkT82Llp4KAAWdDW', 'IT', 'Administrador', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 INSERT INTO usuarios (nombre, email, password, departamento, cargo, activo, fecha_creacion, fecha_actualizacion)
-VALUES ('Usuario Local', 'user@local.com', '$2a$10$4l09Pef/P.mBHEsn55Hcj.wPYOGTs4a2H3IfEKSoO1nT8O6yg/LIm', 'Ventas', 'Vendedor', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+VALUES ('Usuario Local', 'user@local.com', '$2a$10$9atsLDAx.xeTg030ObkVzeVurW.DGJDSYPPUslkT82Llp4KAAWdDW', 'Ventas', 'Vendedor', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 INSERT INTO usuarios (nombre, email, password, departamento, cargo, activo, fecha_creacion, fecha_actualizacion)
-VALUES ('Invitado Local', 'guest@local.com', '$2a$10$4l09Pef/P.mBHEsn55Hcj.wPYOGTs4a2H3IfEKSoO1nT8O6yg/LIm', 'Soporte', 'Soporte Técnico', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+VALUES ('Invitado Local', 'guest@local.com', '$2a$10$9atsLDAx.xeTg030ObkVzeVurW.DGJDSYPPUslkT82Llp4KAAWdDW', 'Soporte', 'Soporte Técnico', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);

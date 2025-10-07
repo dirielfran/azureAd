@@ -25,7 +25,6 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/users")
 @CrossOrigin(origins = {"http://localhost:4200", "https://localhost:4200"})
-@PreAuthorize("hasAuthority('SCOPE_access_as_user')")
 public class UsuarioController {
 
     @Autowired
@@ -33,9 +32,11 @@ public class UsuarioController {
 
     /**
      * Obtiene todos los usuarios
+     * Acepta tanto tokens de Azure AD como JWT locales
      * @return Lista de todos los usuarios
      */
     @GetMapping
+    @PreAuthorize("hasAuthority('SCOPE_access_as_user') or hasAuthority('USUARIOS_LEER')")
     public ResponseEntity<List<Usuario>> getAllUsuarios() {
         List<Usuario> usuarios = usuarioRepository.findAll();
         return ResponseEntity.ok(usuarios);

@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Controlador BFF (Backend for Frontend) para autenticación JWT
@@ -42,7 +43,7 @@ public class BFFUserController {
      * @param id ID del usuario
      * @return Información del usuario
      */
-    @GetMapping("/{id}")
+    @GetMapping("/user/{id}")
     ResponseEntity<ResponseUserDTO> obtenerUserMock(@PathVariable Long id) {
         log.debug("Obteniendo usuario mock con ID: {}", id);
         
@@ -77,6 +78,34 @@ public class BFFUserController {
         response.setUser(validarLoginUser(userDTO));
         response.getUser().setPassword("****");
         return ResponseEntity.ok().body(response);
+    }
+
+    /**
+     * Genera hash BCrypt para una contraseña (endpoint temporal para debugging)
+     * @param password Contraseña a hashear
+     * @return Hash BCrypt generado
+     */
+    @PostMapping("/generate-hash-temp")
+    public ResponseEntity<Map<String, String>> generateHashTemp(@RequestBody Map<String, String> request) {
+        String password = request.get("password");
+        if (password == null) {
+            return ResponseEntity.badRequest().body(Map.of("error", "Parámetro 'password' requerido"));
+        }
+        
+        // Usar el PasswordEncoder del contexto de Spring
+        org.springframework.security.crypto.password.PasswordEncoder passwordEncoder = 
+            new org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder();
+        
+        String hash = passwordEncoder.encode(password);
+        
+        log.info("🔐 Hash BCrypt generado para contraseña: {}", password);
+        log.info("🔐 Hash resultante: {}", hash);
+        
+        return ResponseEntity.ok(Map.of(
+            "password", password,
+            "hash", hash,
+            "message", "Hash generado exitosamente"
+        ));
     }
 
     /**
