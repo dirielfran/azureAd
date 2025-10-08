@@ -1,9 +1,11 @@
 package com.example.apiprotegida.controller;
 
+import com.example.apiprotegida.exceptions.InvalidAuthConfigurationException;
 import com.example.apiprotegida.model.ConfiguracionSistema;
 import com.example.apiprotegida.service.ConfiguracionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -25,21 +27,19 @@ public class ConfiguracionController {
     @Autowired
     private ConfiguracionService configuracionService;
     
+    @Value("${admin.token}")
+    private String adminToken;
+    
 
 
     /**
      * Endpoint con token de administrador personalizado
      */
     @PostMapping("/auth/config/admin")
-    public ResponseEntity<Map<String, Object>> adminConfig(@RequestHeader("X-Admin-Token") String adminToken,
+    public ResponseEntity<Map<String, Object>> adminConfig(@RequestHeader("X-Admin-Token") String receivedToken,
                                                           @RequestBody Map<String, Object> config) {
         // Verificar token de administrador
-        String validAdminToken = System.getenv("ADMIN_TOKEN");
-        if (validAdminToken == null) {
-            validAdminToken = "ADMIN_SECRET_TOKEN_2024"; // Token por defecto para desarrollo
-        }
-        
-        if (!validAdminToken.equals(adminToken)) {
+        if (!adminToken.equals(receivedToken)) {
             log.warn("🚨 Intento de acceso no autorizado con token inválido");
             return ResponseEntity.status(401).body(Map.of("error", "Token de administrador inválido"));
         }
@@ -60,33 +60,22 @@ public class ConfiguracionController {
         // Validar que al menos un método esté habilitado
         if (!finalAzureEnabled && !finalJwtLocalEnabled) {
             log.error("🚨 [SECURITY] Intento de deshabilitar todos los métodos de autenticación - OPERACIÓN RECHAZADA");
-            return ResponseEntity.status(400).body(Map.of(
-                "error", "No se puede deshabilitar todos los métodos de autenticación",
-                "mensaje", "Al menos un método de autenticación debe estar activo para mantener el acceso al sistema",
-                "azureAdHabilitado", currentAzureEnabled,
-                "jwtLocalHabilitado", currentJwtLocalEnabled
-            ));
+            throw new InvalidAuthConfigurationException(
+                "No se puede deshabilitar todos los métodos de autenticación. Al menos un método debe estar activo para mantener el acceso al sistema.",
+                currentAzureEnabled,
+                currentJwtLocalEnabled
+            );
         }
         
-        // Aplicar cambios solo si la validación pasa
-        try {
-            if (azureEnabled != null) {
-                configuracionService.establecerAzureAdHabilitado(azureEnabled);
-                log.info("🔧 [CONFIG] Azure AD {} por administrador", azureEnabled ? "habilitado" : "deshabilitado");
-            }
-            
-            if (jwtLocalEnabled != null) {
-                configuracionService.establecerJwtLocalHabilitado(jwtLocalEnabled);
-                log.info("🔧 [CONFIG] JWT Local {} por administrador", jwtLocalEnabled ? "habilitado" : "deshabilitado");
-            }
-        } catch (IllegalStateException e) {
-            log.error("🚨 [SECURITY] Error de validación en el servicio: {}", e.getMessage());
-            return ResponseEntity.status(400).body(Map.of(
-                "error", "Operación no permitida por seguridad",
-                "mensaje", e.getMessage(),
-                "azureAdHabilitado", configuracionService.esAzureAdHabilitado(),
-                "jwtLocalHabilitado", configuracionService.esJwtLocalHabilitado()
-            ));
+        // Aplicar cambios (las excepciones serán manejadas por GlobalExceptionHandler)
+        if (azureEnabled != null) {
+            configuracionService.establecerAzureAdHabilitado(azureEnabled);
+            log.info("🔧 [CONFIG] Azure AD {} por administrador", azureEnabled ? "habilitado" : "deshabilitado");
+        }
+        
+        if (jwtLocalEnabled != null) {
+            configuracionService.establecerJwtLocalHabilitado(jwtLocalEnabled);
+            log.info("🔧 [CONFIG] JWT Local {} por administrador", jwtLocalEnabled ? "habilitado" : "deshabilitado");
         }
         
         Map<String, Object> response = new HashMap<>();
