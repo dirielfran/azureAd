@@ -202,3 +202,25 @@ VALUES ('Usuario Local', 'user@local.com', '$2a$10$9atsLDAx.xeTg030ObkVzeVurW.DG
 
 INSERT INTO usuarios (nombre, email, password, departamento, cargo, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('Invitado Local', 'guest@local.com', '$2a$10$9atsLDAx.xeTg030ObkVzeVurW.DGJDSYPPUslkT82Llp4KAAWdDW', 'Soporte', 'Soporte Técnico', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+
+-- ============================================
+-- ASIGNAR PERFILES A USUARIOS LOCALES
+-- ============================================
+
+-- Asignar perfil "Usuario Básico" (ID: 1) a admin@local.com
+INSERT INTO usuario_perfil (usuario_id, perfil_id)
+SELECT u.id, 1
+FROM usuarios u
+WHERE u.email = 'admin@local.com';
+
+-- Asignar perfil "Usuario Básico" (ID: 1) a user@local.com
+INSERT INTO usuario_perfil (usuario_id, perfil_id)
+SELECT u.id, 1
+FROM usuarios u
+WHERE u.email = 'user@local.com';
+
+-- Asignar perfil "Gestor" (ID: 2) a guest@local.com para tener más permisos
+INSERT INTO usuario_perfil (usuario_id, perfil_id)
+SELECT u.id, 2
+FROM usuarios u
+WHERE u.email = 'guest@local.com';

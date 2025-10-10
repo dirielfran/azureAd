@@ -5,9 +5,30 @@ import { ProtectedDataComponent } from './components/protected-data.component';
 import { AccessDeniedComponent } from './components/access-denied.component';
 import { UserPermissionsComponent } from './components/user-permissions.component';
 import { AuthStatusComponent } from './components/auth-status.component';
+import { AuthSelectorComponent } from './components/auth-selector.component';
+import { LocalLoginComponent } from './components/local-login.component';
 import { PermissionGuard, AdminGuard, ManagerGuard } from './guards/permission.guard';
+import { AuthGuard } from './guards/auth.guard';
 
 const routes: Routes = [
+  // Selector de autenticación
+  {
+    path: 'auth-selector',
+    component: AuthSelectorComponent,
+    data: {
+      title: 'Seleccionar método de autenticación'
+    }
+  },
+
+  // Login local
+  {
+    path: 'login',
+    component: LocalLoginComponent,
+    data: {
+      title: 'Iniciar sesión'
+    }
+  },
+
   // Ruta principal - redirige al dashboard de permisos
   { 
     path: '', 
@@ -19,7 +40,7 @@ const routes: Routes = [
   { 
     path: 'mis-permisos', 
     component: UserPermissionsComponent, 
-    canActivate: [MsalGuard],
+    canActivate: [AuthGuard],
     data: { 
       title: 'Mis Permisos'
     }
@@ -38,7 +59,7 @@ const routes: Routes = [
   { 
     path: 'datos-protegidos', 
     component: ProtectedDataComponent, 
-    canActivate: [MsalGuard, PermissionGuard],
+    canActivate: [AuthGuard, PermissionGuard],
     data: { 
       permissions: ['DASHBOARD_LEER'],
       requireAll: false,
@@ -50,7 +71,7 @@ const routes: Routes = [
   { 
     path: 'admin', 
     component: UserPermissionsComponent, 
-    canActivate: [MsalGuard, AdminGuard],
+    canActivate: [AuthGuard, AdminGuard],
     data: { 
       title: 'Panel de Administración'
     }
@@ -60,7 +81,7 @@ const routes: Routes = [
   { 
     path: 'gestion', 
     component: UserPermissionsComponent, 
-    canActivate: [MsalGuard, ManagerGuard],
+    canActivate: [AuthGuard, ManagerGuard],
     data: { 
       title: 'Panel de Gestión'
     }
@@ -70,7 +91,7 @@ const routes: Routes = [
   { 
     path: 'usuarios', 
     component: UserPermissionsComponent, 
-    canActivate: [MsalGuard, PermissionGuard],
+    canActivate: [AuthGuard, PermissionGuard],
     data: { 
       permissions: ['USUARIOS_LEER'],
       title: 'Gestión de Usuarios'
@@ -80,7 +101,7 @@ const routes: Routes = [
   { 
     path: 'reportes', 
     component: UserPermissionsComponent, 
-    canActivate: [MsalGuard, PermissionGuard],
+    canActivate: [AuthGuard, PermissionGuard],
     data: { 
       module: 'REPORTES',
       title: 'Reportes del Sistema'
@@ -90,7 +111,7 @@ const routes: Routes = [
   { 
     path: 'configuracion', 
     component: UserPermissionsComponent, 
-    canActivate: [MsalGuard, PermissionGuard],
+    canActivate: [AuthGuard, PermissionGuard],
     data: { 
       permissions: ['CONFIG_LEER', 'CONFIG_EDITAR'],
       requireAll: false,

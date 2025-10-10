@@ -1,6 +1,8 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { MsalService } from '@azure/msal-angular';
 import { AuthorizationService, UserInfo } from './services/authorization.service';
+import { AuthConfigService } from './services/auth-config.service';
+import { LocalAuthService } from './services/local-auth.service';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 
@@ -10,18 +12,22 @@ import { Subscription } from 'rxjs';
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit, OnDestroy {
-  title = 'Sistema de Autorización Azure AD';
+  title = 'Sistema de Autorización';
   userInfo: UserInfo | null = null;
   isInitializingPermissions = false;
+  authMethod: 'azure' | 'local' | 'none' = 'none';
+  isLoadingAuthConfig = true;
   private subscription = new Subscription();
 
   constructor(
     public msalService: MsalService,
     public authorizationService: AuthorizationService,
+    public authConfigService: AuthConfigService,
+    public localAuthService: LocalAuthService,
     private router: Router
   ) {}
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     console.log('🚀 [AppComponent] Inicializando aplicación...');
     
     // Suscribirse a cambios en la información del usuario
@@ -32,8 +38,26 @@ export class AppComponent implements OnInit, OnDestroy {
       })
     );
 
-    // Verificar estado de autenticación
+    // Cargar configuración de autenticación desde el backend
+    await this.loadAuthConfiguration();
+    
+    // Si Azure AD está habilitado, manejar redirects de MSAL manualmente
+    // Esto reemplaza el uso de MsalRedirectComponent en el bootstrap
+    if (this.authMethod === 'azure') {
+      console.log('🔄 [AppComponent] Azure AD habilitado, manejando redirects de MSAL...');
+      try {
+        await this.msalService.instance.handleRedirectPromise();
+        console.log('✅ [AppComponent] Redirect de MSAL procesado exitosamente');
+      } catch (error) {
+        console.error('❌ [AppComponent] Error al manejar redirect de MSAL:', error);
+      }
+    } else {
+      console.log('ℹ️ [AppComponent] Azure AD deshabilitado, omitiendo MSAL');
+    }
+    
+    // Verificar estado de autenticación según el método activo
     console.log('🔍 [AppComponent] Verificando estado de autenticación...');
+    console.log('🔐 [AppComponent] Método de autenticación activo:', this.authMethod);
     console.log('🔐 [AppComponent] ¿Usuario logueado?', this.isLoggedIn);
     console.log('🛡️ [AppComponent] ¿Usuario autorizado?', this.authorizationService.isAuthorized());
 
@@ -44,7 +68,41 @@ export class AppComponent implements OnInit, OnDestroy {
     } else if (this.isLoggedIn && this.authorizationService.isAuthorized()) {
       console.log('✅ [AppComponent] Usuario completamente autenticado y autorizado');
     } else {
-      console.log('❌ [AppComponent] Usuario no autenticado, mostrando pantalla de login');
+      console.log('❌ [AppComponent] Usuario no autenticado -->', this.router.url);
+      // Redirigir al login apropiado si no está autenticado
+      const currentUrl = this.router.url;
+      const publicRoutes = ['/auth-selector', '/login'];
+      
+      // Si no está en una ruta pública, redirigir según el método de autenticación
+      if (!publicRoutes.includes(currentUrl)) {
+        if (this.authMethod === 'local') {
+          console.log('🔀 [AppComponent] Redirigiendo a login local...');
+          this.router.navigate(['/login']);
+        } else {
+          console.log('🔀 [AppComponent] Redirigiendo a selector de autenticación...');
+          this.router.navigate(['/auth-selector']);
+        }
+      }
+    }
+  }
+
+  /**
+   * Carga la configuración de autenticación desde el backend
+   */
+  async loadAuthConfiguration(): Promise<void> {
+    try {
+      console.log('📡 [AppComponent] Cargando configuración de autenticación...');
+      this.isLoadingAuthConfig = true;
+      
+      await this.authConfigService.getAuthStatus();
+      this.authMethod = this.authConfigService.getActiveAuthMethod();
+      
+      console.log('✅ [AppComponent] Configuración cargada:', this.authMethod);
+      this.isLoadingAuthConfig = false;
+    } catch (error) {
+      console.error('❌ [AppComponent] Error al cargar configuración:', error);
+      this.isLoadingAuthConfig = false;
+      this.authMethod = 'none';
     }
   }
 
@@ -53,30 +111,53 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Inicia sesión con Microsoft Entra ID
+   * Inicia sesión según el método de autenticación activo
    */
   login() {
     console.log('🔑 [AppComponent] Iniciando proceso de login...');
-    console.log('🌐 [AppComponent] Redirigiendo a Microsoft Entra ID...');
-    this.msalService.loginRedirect();
+    
+    if (this.authMethod === 'azure') {
+      console.log('🌐 [AppComponent] Redirigiendo a Microsoft Entra ID...');
+      this.msalService.loginRedirect();
+    } else if (this.authMethod === 'local') {
+      console.log('🔐 [AppComponent] Redirigiendo al login local...');
+      this.router.navigate(['/login']);
+    } else {
+      console.log('⚠️ [AppComponent] No hay método de autenticación activo');
+      this.router.navigate(['/auth-selector']);
+    }
   }
 
   /**
-   * Cierra sesión y limpia los permisos
+   * Cierra sesión según el método de autenticación activo
    */
   logout() {
     console.log('👋 [AppComponent] Iniciando proceso de logout...');
     console.log('🧹 [AppComponent] Limpiando permisos del usuario...');
     this.authorizationService.logout();
-    console.log('🌐 [AppComponent] Redirigiendo a Microsoft para cerrar sesión...');
-    this.msalService.logoutRedirect();
+    
+    if (this.authMethod === 'azure') {
+      console.log('🌐 [AppComponent] Cerrando sesión de Microsoft...');
+      this.msalService.logoutRedirect();
+    } else if (this.authMethod === 'local') {
+      console.log('🔐 [AppComponent] Cerrando sesión local...');
+      this.localAuthService.logout();
+      this.router.navigate(['/login']);
+    } else {
+      this.router.navigate(['/auth-selector']);
+    }
   }
 
   /**
-   * Verifica si el usuario está autenticado
+   * Verifica si el usuario está autenticado según el método activo
    */
   get isLoggedIn(): boolean {
-    return this.msalService.instance.getAllAccounts().length > 0;
+    if (this.authMethod === 'azure') {
+      return this.msalService.instance.getAllAccounts().length > 0;
+    } else if (this.authMethod === 'local') {
+      return this.localAuthService.isAuthenticated();
+    }
+    return false;
   }
 
 
@@ -86,35 +167,61 @@ export class AppComponent implements OnInit, OnDestroy {
   
 
   /**
-   * Obtiene el nombre del usuario actual
+   * Obtiene el nombre del usuario actual según el método de autenticación
    */
   get userName(): string {
     if (this.userInfo) {
       return this.userInfo.nombre;
     }
     
-    const accounts = this.msalService.instance.getAllAccounts();
-    if (accounts.length > 0) {
-      return accounts[0].name || accounts[0].username || 'Usuario';
+    if (this.authMethod === 'azure') {
+      const accounts = this.msalService.instance.getAllAccounts();
+      if (accounts.length > 0) {
+        return accounts[0].name || accounts[0].username || 'Usuario';
+      }
+    } else if (this.authMethod === 'local') {
+      const user = this.localAuthService.getCurrentUser();
+      if (user) {
+        return user.nombre;
+      }
     }
     
     return 'Usuario';
   }
 
   /**
-   * Obtiene el email del usuario actual
+   * Obtiene el email del usuario actual según el método de autenticación
    */
   get userEmail(): string {
     if (this.userInfo) {
       return this.userInfo.email;
     }
     
-    const accounts = this.msalService.instance.getAllAccounts();
-    if (accounts.length > 0) {
-      return accounts[0].username || 'usuario@empresa.com';
+    if (this.authMethod === 'azure') {
+      const accounts = this.msalService.instance.getAllAccounts();
+      if (accounts.length > 0) {
+        return accounts[0].username || 'usuario@empresa.com';
+      }
+    } else if (this.authMethod === 'local') {
+      const user = this.localAuthService.getCurrentUser();
+      if (user) {
+        return user.email;
+      }
     }
     
     return '';
+  }
+  
+  /**
+   * Obtiene el método de autenticación en formato legible
+   */
+  get authMethodName(): string {
+    if (this.authMethod === 'azure') {
+      return 'Microsoft Entra ID';
+    } else if (this.authMethod === 'local') {
+      return 'Autenticación Local';
+    }
+    return 'No configurado';
   }
 
   /**

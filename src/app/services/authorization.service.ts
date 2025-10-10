@@ -84,9 +84,13 @@ export class AuthorizationService {
   initializeUserPermissions(): Observable<UserInfo> {
     console.log('🔄 [AuthorizationService] Inicializando permisos del usuario...');
     console.log('🌐 [AuthorizationService] URL del endpoint:', `${this.baseUrl}/informacion-usuario`);
+    console.log('📡 [AuthorizationService] Creando petición HTTP GET...');
     this.loadingSubject.next(true);
     
-    return this.http.get<UserInfo>(`${this.baseUrl}/informacion-usuario`).pipe(
+    const observable = this.http.get<UserInfo>(`${this.baseUrl}/informacion-usuario`);
+    console.log('📦 [AuthorizationService] Observable creado, agregando pipe...');
+    
+    return observable.pipe(
       tap(userInfo => {
         console.log('✅ [AuthorizationService] Información del usuario obtenida del backend:', userInfo);
         console.log('📊 [AuthorizationService] Detalles del usuario:');

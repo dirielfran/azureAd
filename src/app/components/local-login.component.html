@@ -1,0 +1,101 @@
+<div class="login-container">
+  <div class="login-card">
+    <!-- Header -->
+    <div class="login-header">
+      <button class="back-button" (click)="goBack()">
+        ← Volver
+      </button>
+      <div class="login-icon">🔑</div>
+      <h1>Iniciar Sesión</h1>
+      <p>Ingresa tus credenciales del sistema</p>
+    </div>
+
+    <!-- Error Message -->
+    <div *ngIf="errorMessage" class="error-message" (click)="clearError()">
+      <span class="error-icon">⚠️</span>
+      <span class="error-text">{{ errorMessage }}</span>
+      <span class="error-close">×</span>
+    </div>
+
+    <!-- Login Form -->
+    <form (ngSubmit)="onSubmit()" class="login-form">
+      <!-- Email Input -->
+      <div class="form-group">
+        <label for="email">
+          <span class="label-icon">📧</span>
+          Email
+        </label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          [(ngModel)]="email"
+          placeholder="tu-email@empresa.com"
+          [disabled]="isLoading"
+          autocomplete="email"
+          required
+        />
+      </div>
+
+      <!-- Password Input -->
+      <div class="form-group">
+        <label for="password">
+          <span class="label-icon">🔒</span>
+          Contraseña
+        </label>
+        <div class="password-input-wrapper">
+          <input
+            [type]="showPassword ? 'text' : 'password'"
+            id="password"
+            name="password"
+            [(ngModel)]="password"
+            placeholder="••••••••"
+            [disabled]="isLoading"
+            autocomplete="current-password"
+            required
+          />
+          <button
+            type="button"
+            class="toggle-password"
+            (click)="togglePasswordVisibility()"
+            [disabled]="isLoading"
+          >
+            {{ showPassword ? '👁️' : '👁️‍🗨️' }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Submit Button -->
+      <button
+        type="submit"
+        class="btn-submit"
+        [disabled]="isLoading || !email || !password"
+      >
+        <span *ngIf="!isLoading" class="btn-content">
+          <span class="btn-icon">🚀</span>
+          Iniciar Sesión
+        </span>
+        <span *ngIf="isLoading" class="btn-loading">
+          <span class="spinner"></span>
+          Autenticando...
+        </span>
+      </button>
+    </form>
+
+    <!-- Footer -->
+    <div class="login-footer">
+      <p class="help-text">
+        ¿Problemas para iniciar sesión? Contacta al administrador
+      </p>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div *ngIf="isLoading" class="loading-overlay">
+      <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <p>Autenticando...</p>
+      </div>
+    </div>
+  </div>
+</div>
+

@@ -26,17 +26,23 @@
 import { NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
 import { ProtectedDataComponent } from './components/protected-data.component';
 import { AccessDeniedComponent } from './components/access-denied.component';
 import { UserPermissionsComponent } from './components/user-permissions.component';
+import { AuthSelectorComponent } from './components/auth-selector.component';
+import { LocalLoginComponent } from './components/local-login.component';
 
 // Importar servicios de autorización
 import { AuthorizationService } from './services/authorization.service';
+import { AuthConfigService } from './services/auth-config.service';
+import { LocalAuthService } from './services/local-auth.service';
 
 // Importar guards
 import { PermissionGuard, AdminGuard, ManagerGuard } from './guards/permission.guard';
+import { AuthGuard } from './guards/auth.guard';
 
 // Importar directivas
 import { 
@@ -47,6 +53,9 @@ import {
 
 // Componente de estado de autenticación
 import { AuthStatusComponent } from './components/auth-status.component';
+
+// Importar interceptor JWT
+import { JwtAuthInterceptor } from './interceptors/jwt-auth.interceptor';
 
 // Importaciones de MSAL para Microsoft Entra ID
 import { 
@@ -89,10 +98,67 @@ import { environment } from '../environments/environment';
  * - Redirect URI (donde regresar después del login)
  * - Cache configuration (localStorage para persistir tokens)
  * 
+ * IMPORTANTE: Esta instancia se crea al iniciar la app. Para evitar
+ * redirecciones no deseadas, se debe limpiar el localStorage de MSAL
+ * cuando se cambia de Azure AD a JWT Local.
+ * 
  * @returns {IPublicClientApplication} Instancia de MSAL configurada
  */
 export function MSALInstanceFactory(): IPublicClientApplication {
+  // Verificar si hay configuración guardada de autenticación
+  const authConfig = localStorage.getItem('auth_config');
+  if (authConfig) {
+    try {
+      const config = JSON.parse(authConfig);
+      // Si JWT Local está activo y Azure deshabilitado, limpiar MSAL del localStorage
+      if (config.jwtLocalHabilitado && !config.azureAdHabilitado) {
+        console.log('🧹 [MSALInstanceFactory] JWT Local activo, limpiando cache de MSAL...');
+        cleanMSALCache();
+      }
+    } catch (error) {
+      console.warn('⚠️ [MSALInstanceFactory] Error al leer configuración:', error);
+    }
+  }
+  
   return new PublicClientApplication(environment.msalConfig);
+}
+
+/**
+ * Limpia el cache de MSAL del localStorage y sessionStorage
+ */
+function cleanMSALCache(): void {
+  // Limpiar localStorage
+  const msalKeys: string[] = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key && (
+      key.includes('msal') || 
+      key.includes('login.windows.net') ||
+      key.includes('login.microsoftonline.com')
+    )) {
+      msalKeys.push(key);
+    }
+  }
+  msalKeys.forEach(key => {
+    localStorage.removeItem(key);
+    console.log('  🗑️ Removido:', key);
+  });
+  
+  // Limpiar sessionStorage
+  const sessionKeys: string[] = [];
+  for (let i = 0; i < sessionStorage.length; i++) {
+    const key = sessionStorage.key(i);
+    if (key && (
+      key.includes('msal') || 
+      key.includes('login.windows.net') ||
+      key.includes('login.microsoftonline.com')
+    )) {
+      sessionKeys.push(key);
+    }
+  }
+  sessionKeys.forEach(key => sessionStorage.removeItem(key));
+  
+  console.log(`✅ [MSALInstanceFactory] ${msalKeys.length + sessionKeys.length} elementos de MSAL limpiados`);
 }
 
 
@@ -157,16 +223,32 @@ export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
   // Mapa que define qué URLs necesitan qué scopes
   const protectedResourceMap = new Map<string, Array<string>>();
   
-  // 📊 Microsoft Graph API - Para obtener perfil de usuario
-  protectedResourceMap.set('https://graph.microsoft.com/v1.0/me', ['user.read']);
+  // Verificar si JWT Local está activo
+  const authConfig = localStorage.getItem('auth_config');
+  let isJwtLocalActive = false;
   
-  // 🚀 Tu API Spring Boot protegida - CONFIGURACIÓN PRINCIPAL
-  // Cualquier petición a http://localhost:8080/api/* incluirá automáticamente el token
-  protectedResourceMap.set('http://localhost:8080/api', ['api://4a12fbd8-bf63-4c12-be4c-9678b207fbe7/access_as_user']);
+  if (authConfig) {
+    try {
+      const config = JSON.parse(authConfig);
+      isJwtLocalActive = config.jwtLocalHabilitado && !config.azureAdHabilitado;
+    } catch (e) {
+      console.warn('Error al leer configuración de autenticación');
+    }
+  }
   
-  // 🔧 Ejemplo para agregar más APIs (descomenta y personaliza según necesites)
-  // protectedResourceMap.set('https://otra-api.com/api', ['scope1', 'scope2']);
-  // protectedResourceMap.set('https://mi-segunda-api.com', ['api://mi-app/read']);
+  // Solo configurar rutas protegidas si Azure AD está activo
+  if (!isJwtLocalActive) {
+    console.log('🔧 [MSALInterceptor] Configurando rutas protegidas para Azure AD');
+    
+    // 📊 Microsoft Graph API - Para obtener perfil de usuario
+    protectedResourceMap.set('https://graph.microsoft.com/v1.0/me', ['user.read']);
+    
+    // 🚀 Tu API Spring Boot protegida - CONFIGURACIÓN PRINCIPAL
+    protectedResourceMap.set('http://localhost:8080/api/data', ['api://4a12fbd8-bf63-4c12-be4c-9678b207fbe7/access_as_user']);
+    protectedResourceMap.set('http://localhost:8080/api/autorizacion', ['api://4a12fbd8-bf63-4c12-be4c-9678b207fbe7/access_as_user']);
+  } else {
+    console.log('ℹ️ [MSALInterceptor] JWT Local activo, MsalInterceptor desactivado (mapa vacío)');
+  }
 
   return {
     interactionType: InteractionType.Redirect,
@@ -190,6 +272,8 @@ export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
     AccessDeniedComponent,     // Componente para mostrar errores de acceso denegado
     UserPermissionsComponent,  // Componente para mostrar permisos del usuario
     AuthStatusComponent,       // Componente para mostrar estado de autenticación
+    AuthSelectorComponent,     // Componente selector de método de autenticación
+    LocalLoginComponent,       // Componente de login local con JWT
     // Directivas personalizadas
     HasPermissionDirective,    // Directiva para renderizado condicional por permisos
     IsAdminDirective,         // Directiva para contenido solo de administradores
@@ -202,6 +286,7 @@ export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
   imports: [
     BrowserModule,       // Módulo base para aplicaciones que corren en el navegador
     CommonModule,        // Directivas comunes de Angular (ngIf, ngFor, etc.)
+    FormsModule,         // Módulo para formularios (ngModel)
     AppRoutingModule,    // Configuración de rutas de la aplicación
     HttpClientModule,    // Cliente HTTP para hacer peticiones a APIs
     MsalModule          // Módulo de MSAL para autenticación con Microsoft
@@ -212,11 +297,25 @@ export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
    */
   providers: [
     /**
-     * 🔄 HTTP INTERCEPTOR - MsalInterceptor
+     * 🔄 HTTP INTERCEPTOR - JwtAuthInterceptor (PRIMERO)
      * 
-     * Este interceptor es la CLAVE de todo el sistema:
-     * - Se ejecuta en TODAS las peticiones HTTP
-     * - Agrega automáticamente tokens de autorización
+     * Interceptor para autenticación JWT local:
+     * - Agrega tokens JWT a las peticiones cuando la autenticación local está activa
+     * - Maneja errores 401/403 y redirige al login
+     * - Se ejecuta ANTES que MsalInterceptor para tener prioridad
+     */
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: JwtAuthInterceptor,
+      multi: true
+    },
+    
+    /**
+     * 🔄 HTTP INTERCEPTOR - MsalInterceptor (SEGUNDO)
+     * 
+     * Este interceptor maneja tokens de Azure AD:
+     * - Solo se activa para endpoints específicos configurados
+     * - Agrega automáticamente tokens de Azure AD
      * - Usa la configuración de MSALInterceptorConfigFactory
      * - multi: true permite múltiples interceptors
      */
@@ -267,18 +366,22 @@ export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
     
     // 🛡️ Servicios y Guards de Autorización
     AuthorizationService,  // Servicio para gestión de permisos
+    AuthConfigService,     // Servicio para obtener configuración de autenticación
+    LocalAuthService,      // Servicio para autenticación local con JWT
     PermissionGuard,      // Guard para verificar permisos específicos
     AdminGuard,           // Guard para acceso de administradores
-    ManagerGuard          // Guard para acceso de gestores
+    ManagerGuard,         // Guard para acceso de gestores
+    AuthGuard             // Guard combinado para ambos tipos de autenticación
   ],
   
   /**
    * 🚀 BOOTSTRAP - Componentes que se cargan al iniciar la aplicación
    * 
    * - AppComponent: Componente principal de la aplicación
-   * - MsalRedirectComponent: Maneja las redirecciones de vuelta desde Microsoft
+   * - MsalRedirectComponent: Solo debe activarse cuando Azure AD está habilitado
+   *   (se removió del bootstrap para evitar redirecciones automáticas)
    */
-  bootstrap: [AppComponent, MsalRedirectComponent]
+  bootstrap: [AppComponent]
 })
 export class AppModule { 
   

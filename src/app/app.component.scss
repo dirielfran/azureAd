@@ -524,3 +524,48 @@
     }
   }
 }
+
+// =============================================================================
+// AUTH METHOD BADGE & LOADING
+// =============================================================================
+.auth-method-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-right: 12px;
+  
+  i {
+    font-size: 1rem;
+  }
+}
+
+.auth-method-small {
+  display: block;
+  font-size: 0.75rem;
+  color: #999;
+  margin-top: 2px;
+  
+  i {
+    font-size: 0.7rem;
+    margin-right: 4px;
+  }
+}
+
+.loading-auth-config {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  
+  i {
+    font-size: 1.2rem;
+  }
+}

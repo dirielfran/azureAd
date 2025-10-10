@@ -99,15 +99,29 @@ Componente principal que incluye navegación con permisos y estado del usuario
 
       <!-- Controles de autenticación -->
       <div class="auth-controls">
+        <!-- Indicador de método de autenticación -->
+        <div *ngIf="!isLoadingAuthConfig && authMethod !== 'none'" class="auth-method-badge">
+          <i class="fas" [ngClass]="authMethod === 'azure' ? 'fa-cloud' : 'fa-database'"></i>
+          <span>{{ authMethodName }}</span>
+        </div>
+        
         <!-- Estado no autenticado -->
         <button 
-          *ngIf="!isLoggedIn" 
+          *ngIf="!isLoggedIn && !isLoadingAuthConfig" 
           (click)="login()" 
           class="btn btn-primary login-btn"
         >
           <i class="fas fa-sign-in-alt"></i>
-          Iniciar sesión con Microsoft
+          <span *ngIf="authMethod === 'azure'">Iniciar sesión con Microsoft</span>
+          <span *ngIf="authMethod === 'local'">Iniciar sesión</span>
+          <span *ngIf="authMethod === 'none'">Seleccionar método de autenticación</span>
         </button>
+        
+        <!-- Estado cargando configuración -->
+        <div *ngIf="isLoadingAuthConfig" class="loading-auth-config">
+          <i class="fas fa-spinner fa-spin"></i>
+          <span>Cargando configuración...</span>
+        </div>
         
         <!-- Estado autenticado -->
         <div *ngIf="isLoggedIn" class="user-info">
@@ -119,6 +133,10 @@ Componente principal que incluye navegación con permisos y estado del usuario
             <div class="user-text">
               <span class="user-name">{{ userName }}</span>
               <span class="user-email">{{ userEmail }}</span>
+              <span class="auth-method-small">
+                <i class="fas" [ngClass]="authMethod === 'azure' ? 'fa-cloud' : 'fa-database'"></i>
+                {{ authMethodName }}
+              </span>
             </div>
           </div>
           
@@ -196,7 +214,7 @@ Componente principal que incluye navegación con permisos y estado del usuario
     <div class="footer-content">
       <p>
         <i class="fas fa-shield-alt"></i>
-        Sistema de Autorización basado en Azure AD
+        Sistema de Autorización - {{ authMethodName }}
       </p>
       <div class="footer-links">
         <a href="#" (click)="navigateTo('/mis-permisos')">Mis Permisos</a>

@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.Base64;
 
 import static com.example.apiprotegida.security.SecurityConstant.TOKEN_PREFIX;
 import static org.springframework.http.HttpHeaders.AUTHORIZATION;
@@ -89,15 +90,40 @@ public class DualAuthenticationFilter extends OncePerRequestFilter {
 
     /**
      * Determina si un token es JWT local o de Azure AD
+     * Decodifica el JWT sin validarlo para verificar el claim "iss" (issuer)
      * @param token El token a analizar
      * @return true si es JWT local, false si es de Azure AD
      */
     private boolean isLocalJwtToken(String token) {
         try {
-            // Intentar validar como token JWT local
-            return jwtTokenProvider.isTokenValid(token);
+            // Decodificar el payload del JWT sin validar la firma
+            String[] parts = token.split("\\.");
+            if (parts.length < 2) {
+                log.debug("Token inválido: no tiene el formato correcto");
+                return false;
+            }
+            
+            // Decodificar el payload (segunda parte del JWT)
+            String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
+            
+            // Verificar si contiene el issuer de JWT local ("API_TYC")
+            if (payload.contains("\"iss\":\"API_TYC\"")) {
+                log.debug("Token identificado como JWT local (issuer: API_TYC)");
+                return true;
+            }
+            
+            // Verificar si contiene el issuer de Azure AD (login.microsoftonline.com)
+            if (payload.contains("login.microsoftonline.com")) {
+                log.debug("Token identificado como Azure AD (issuer contiene login.microsoftonline.com)");
+                return false;
+            }
+            
+            // Si no se puede determinar, asumir que es de Azure AD para ser seguro
+            log.debug("No se pudo determinar el tipo de token, asumiendo Azure AD");
+            return false;
+            
         } catch (Exception e) {
-            log.debug("Token no es JWT local: {}", e.getMessage());
+            log.error("Hubo un error al verificar el token: {}", e.getMessage());
             return false;
         }
     }

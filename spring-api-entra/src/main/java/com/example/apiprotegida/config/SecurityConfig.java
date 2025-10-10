@@ -73,6 +73,7 @@ public class SecurityConfig {
                     "/public/**",
                     "/auth/info",
                     "/auth/login",
+                    "/auth/local/**",  // Endpoints de autenticación JWT local
                     "/auth/generate-hash-temp",
                     "/config/auth/status",
                     "/config/auth/config/admin"  // Endpoint seguro con token de administrador
