@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Entidad Usuario para demostrar el uso de la API protegida
@@ -48,6 +50,15 @@ public class Usuario {
     
     @Column
     private Boolean activo = true;
+    
+    // Relación Many-to-Many con Perfil
+    @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+    @JoinTable(
+        name = "usuario_perfil",
+        joinColumns = @JoinColumn(name = "usuario_id"),
+        inverseJoinColumns = @JoinColumn(name = "perfil_id")
+    )
+    private Set<Perfil> perfiles = new HashSet<>();
 
     // Constructores
     public Usuario() {
@@ -151,6 +162,14 @@ public class Usuario {
 
     public void setActivo(Boolean activo) {
         this.activo = activo;
+    }
+
+    public Set<Perfil> getPerfiles() {
+        return perfiles;
+    }
+
+    public void setPerfiles(Set<Perfil> perfiles) {
+        this.perfiles = perfiles;
     }
 
     // toString

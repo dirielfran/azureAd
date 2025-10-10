@@ -41,6 +41,8 @@ import { Observable, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
 import { AuthorizationService } from '../services/authorization.service';
 import { MsalService } from '@azure/msal-angular';
+import { AuthConfigService } from '../services/auth-config.service';
+import { LocalAuthService } from '../services/local-auth.service';
 
 @Injectable({
   providedIn: 'root'
@@ -50,6 +52,8 @@ export class PermissionGuard implements CanActivate, CanActivateChild {
   constructor(
     private authorizationService: AuthorizationService,
     private msalService: MsalService,
+    private authConfigService: AuthConfigService,
+    private localAuthService: LocalAuthService,
     private router: Router
   ) {}
 
@@ -84,13 +88,27 @@ export class PermissionGuard implements CanActivate, CanActivateChild {
     console.log(`🛡️ [PermissionGuard] Verificando acceso a ${state.url}`);
     console.log(`📍 [PermissionGuard] Ruta completa:`, route.routeConfig?.path);
 
-    // Verificar si el usuario está autenticado en MSAL
+    // Verificar si el usuario está autenticado (Azure o JWT Local)
     if (!this.isUserAuthenticated()) {
-      console.log('❌ [PermissionGuard] Usuario no autenticado, redirigiendo al login');
-      this.msalService.loginRedirect();
+      console.log('❌ [PermissionGuard] Usuario no autenticado, redirigiendo...');
+      const authMethod = this.authConfigService.getActiveAuthMethod();
+      
+      if (authMethod === 'azure') {
+        console.log('🌐 [PermissionGuard] Redirigiendo a Microsoft...');
+        this.msalService.loginRedirect();
+      } else if (authMethod === 'local') {
+        console.log('🔐 [PermissionGuard] Redirigiendo a login local...');
+        this.router.navigate(['/login'], {
+          queryParams: { returnUrl: state.url }
+        });
+      } else {
+        console.log('⚠️ [PermissionGuard] No hay método de autenticación configurado');
+        this.router.navigate(['/auth-selector']);
+      }
+      
       return false;
     }
-    console.log('✅ [PermissionGuard] Usuario autenticado en MSAL');
+    console.log('✅ [PermissionGuard] Usuario autenticado');
 
     // Obtener configuración de permisos desde la ruta
     const routeData = route.data;
@@ -184,12 +202,20 @@ export class PermissionGuard implements CanActivate, CanActivateChild {
   }
 
   /**
-   * Verifica si el usuario está autenticado en MSAL
+   * Verifica si el usuario está autenticado (Azure AD o JWT Local)
    */
   private isUserAuthenticated(): boolean {
+    const authMethod = this.authConfigService.getActiveAuthMethod();
+    
     try {
-      const accounts = this.msalService.instance.getAllAccounts();
-      return accounts.length > 0;
+      if (authMethod === 'azure') {
+        const accounts = this.msalService.instance.getAllAccounts();
+        return accounts.length > 0;
+      } else if (authMethod === 'local') {
+        return this.localAuthService.isAuthenticated();
+      }
+      
+      return false;
     } catch (error) {
       console.error('❌ Error al verificar autenticación:', error);
       return false;

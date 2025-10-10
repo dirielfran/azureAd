@@ -4,6 +4,8 @@ import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { MsalService } from '@azure/msal-angular';
 import { API_CONFIG, GRAPH_CONFIG } from '../config/api.config';
+import { AuthConfigService } from './auth-config.service';
+import { LocalAuthService } from './local-auth.service';
 
 @Injectable({
   providedIn: 'root'
@@ -13,7 +15,9 @@ export class ApiService {
 
   constructor(
     private http: HttpClient,
-    private msalService: MsalService
+    private msalService: MsalService,
+    private authConfigService: AuthConfigService,
+    private localAuthService: LocalAuthService
   ) {}
 
   /**
@@ -122,15 +126,28 @@ export class ApiService {
    * @returns true si está autenticado, false en caso contrario
    */
   isAuthenticated(): boolean {
-    const accounts = this.msalService.instance.getAllAccounts();
-    const isAuth = accounts.length > 0;
-    console.log('🔍 [ApiService] Verificando autenticación:');
-    console.log('  - Cuentas encontradas:', accounts.length);
-    console.log('  - ¿Autenticado?', isAuth);
-    if (isAuth) {
-      console.log('  - Primera cuenta:', accounts[0].name || accounts[0].username);
+    // Verificar autenticación según el método activo
+    const authMethod = this.authConfigService.getActiveAuthMethod();
+    
+    if (authMethod === 'azure') {
+      const accounts = this.msalService.instance.getAllAccounts();
+      const isAuth = accounts.length > 0;
+      console.log('🔍 [ApiService] Verificando autenticación Azure AD:');
+      console.log('  - Cuentas encontradas:', accounts.length);
+      console.log('  - ¿Autenticado?', isAuth);
+      if (isAuth) {
+        console.log('  - Primera cuenta:', accounts[0].name || accounts[0].username);
+      }
+      return isAuth;
+    } else if (authMethod === 'local') {
+      const isAuth = this.localAuthService.isAuthenticated();
+      console.log('🔍 [ApiService] Verificando autenticación JWT Local:');
+      console.log('  - ¿Autenticado?', isAuth);
+      return isAuth;
     }
-    return isAuth;
+    
+    console.log('🔍 [ApiService] No hay método de autenticación configurado');
+    return false;
   }
 
   /**
@@ -139,45 +156,68 @@ export class ApiService {
    */
   async getAccessToken(): Promise<string | null> {
     console.log('🔑 [ApiService] Solicitando token de acceso...');
-    try {
-      const accounts = this.msalService.instance.getAllAccounts();
-      if (accounts.length === 0) {
-        console.error('❌ [ApiService] No hay cuentas autenticadas');
+    
+    // Verificar método de autenticación activo
+    const authMethod = this.authConfigService.getActiveAuthMethod();
+    console.log('🔐 [ApiService] Método de autenticación:', authMethod);
+    
+    if (authMethod === 'local') {
+      // Obtener token JWT local
+      const token = this.localAuthService.getToken();
+      if (token) {
+        console.log('✅ [ApiService] Token JWT local obtenido');
+        console.log('🔑 [ApiService] Token (primeros 50 chars):', token.substring(0, 50) + '...');
+        return token;
+      } else {
+        console.error('❌ [ApiService] No hay token JWT local');
         return null;
       }
-
-      const tokenRequest = {
-        scopes: ['user.read', 'api://4a12fbd8-bf63-4c12-be4c-9678b207fbe7/access_as_user'],
-        account: accounts[0]
-      };
-
-      console.log('📋 [ApiService] Scopes solicitados:', tokenRequest.scopes);
-      console.log('👤 [ApiService] Cuenta utilizada:', accounts[0].name || accounts[0].username);
-      
-      const response = await this.msalService.instance.acquireTokenSilent(tokenRequest);
-      console.log('✅ [ApiService] Token obtenido exitosamente (silencioso)');
-      console.log('🔑 [ApiService] Token (primeros 50 chars):', response.accessToken.substring(0, 50) + '...');
-      return response.accessToken;
-    } catch (error) {
-      console.error('❌ [ApiService] Error obteniendo token silenciosamente:', error);
-      
-      // Si falla el token silencioso, intentar con popup
+    } else if (authMethod === 'azure') {
+      // Obtener token de Azure AD
       try {
-        console.log('🔄 [ApiService] Intentando obtener token con popup...');
         const accounts = this.msalService.instance.getAllAccounts();
+        if (accounts.length === 0) {
+          console.error('❌ [ApiService] No hay cuentas autenticadas en Azure AD');
+          return null;
+        }
+
         const tokenRequest = {
           scopes: ['user.read', 'api://4a12fbd8-bf63-4c12-be4c-9678b207fbe7/access_as_user'],
           account: accounts[0]
         };
+
+        console.log('📋 [ApiService] Scopes solicitados:', tokenRequest.scopes);
+        console.log('👤 [ApiService] Cuenta utilizada:', accounts[0].name || accounts[0].username);
         
-        const response = await this.msalService.instance.acquireTokenPopup(tokenRequest);
-        console.log('✅ [ApiService] Token obtenido con popup exitosamente');
+        const response = await this.msalService.instance.acquireTokenSilent(tokenRequest);
+        console.log('✅ [ApiService] Token obtenido exitosamente (silencioso)');
         console.log('🔑 [ApiService] Token (primeros 50 chars):', response.accessToken.substring(0, 50) + '...');
         return response.accessToken;
-      } catch (popupError) {
-        console.error('❌ [ApiService] Error obteniendo token con popup:', popupError);
-        return null;
+      } catch (error) {
+        console.error('❌ [ApiService] Error obteniendo token silenciosamente:', error);
+        
+        // Si falla el token silencioso, intentar con popup
+        try {
+          console.log('🔄 [ApiService] Intentando obtener token con popup...');
+          const accounts = this.msalService.instance.getAllAccounts();
+          const tokenRequest = {
+            scopes: ['user.read', 'api://4a12fbd8-bf63-4c12-be4c-9678b207fbe7/access_as_user'],
+            account: accounts[0]
+          };
+          
+          const response = await this.msalService.instance.acquireTokenPopup(tokenRequest);
+          console.log('✅ [ApiService] Token obtenido con popup exitosamente');
+          console.log('🔑 [ApiService] Token (primeros 50 chars):', response.accessToken.substring(0, 50) + '...');
+          return response.accessToken;
+        } catch (popupError) {
+          console.error('❌ [ApiService] Error obteniendo token con popup:', popupError);
+          return null;
+        }
       }
     }
+    
+    // Si no hay método de autenticación configurado
+    console.error('❌ [ApiService] No hay método de autenticación configurado');
+    return null;
   }
 }

@@ -26,6 +26,17 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<Usuario> findByEmail(String email);
     
     /**
+     * Busca un usuario por su email cargando sus perfiles y permisos (para JWT)
+     * @param email El email del usuario
+     * @return Optional con el usuario y sus perfiles/permisos cargados
+     */
+    @Query("SELECT DISTINCT u FROM Usuario u " +
+           "LEFT JOIN FETCH u.perfiles p " +
+           "LEFT JOIN FETCH p.permisos " +
+           "WHERE u.email = :email")
+    Optional<Usuario> findByEmailWithPerfiles(@Param("email") String email);
+    
+    /**
      * Busca un usuario por su Azure Object ID
      * @param azureObjectId El Object ID de Azure AD
      * @return Optional con el usuario si existe

@@ -1,6 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { ApiService } from '../services/api.service';
 import { MsalService } from '@azure/msal-angular';
+import { AuthConfigService } from '../services/auth-config.service';
+import { LocalAuthService } from '../services/local-auth.service';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-protected-data',
@@ -274,7 +277,10 @@ export class ProtectedDataComponent implements OnInit {
 
   constructor(
     private apiService: ApiService,
-    private msalService: MsalService
+    private msalService: MsalService,
+    private authConfigService: AuthConfigService,
+    private localAuthService: LocalAuthService,
+    private router: Router
   ) {}
 
   ngOnInit() {
@@ -285,11 +291,32 @@ export class ProtectedDataComponent implements OnInit {
   }
 
   get isAuthenticated(): boolean {
-    return this.apiService.isAuthenticated();
+    // Verificar autenticación según el método activo
+    const authMethod = this.authConfigService.getActiveAuthMethod();
+    
+    if (authMethod === 'azure') {
+      return this.msalService.instance.getAllAccounts().length > 0;
+    } else if (authMethod === 'local') {
+      return this.localAuthService.isAuthenticated();
+    }
+    
+    return false;
   }
 
   login() {
-    this.msalService.loginRedirect();
+    // Iniciar sesión según el método activo
+    const authMethod = this.authConfigService.getActiveAuthMethod();
+    
+    if (authMethod === 'azure') {
+      console.log('🌐 [ProtectedData] Redirigiendo a Microsoft Entra ID...');
+      this.msalService.loginRedirect();
+    } else if (authMethod === 'local') {
+      console.log('🔐 [ProtectedData] Redirigiendo al login local...');
+      this.router.navigate(['/login']);
+    } else {
+      console.log('⚠️ [ProtectedData] No hay método de autenticación configurado');
+      this.router.navigate(['/auth-selector']);
+    }
   }
 
   async getUserProfile() {
@@ -516,17 +543,38 @@ export class ProtectedDataComponent implements OnInit {
     }
 
     try {
+      // Remover "Bearer " si existe
+      let token = this.accessToken.trim();
+      if (token.startsWith('Bearer ')) {
+        token = token.substring(7);
+      }
+      
       // Decodificar JWT (solo el payload, sin verificar firma)
-      const parts = this.accessToken.split('.');
+      const parts = token.split('.');
       if (parts.length !== 3) {
-        throw new Error('Token JWT inválido');
+        throw new Error('Token JWT inválido - debe tener 3 partes');
       }
 
+      // Función para decodificar Base64URL (JWT usa Base64URL, no Base64 estándar)
+      const base64UrlDecode = (str: string): string => {
+        // Convertir Base64URL a Base64 estándar
+        let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+        // Agregar padding si es necesario
+        const pad = base64.length % 4;
+        if (pad) {
+          if (pad === 1) {
+            throw new Error('Base64URL inválido');
+          }
+          base64 += new Array(5 - pad).join('=');
+        }
+        return atob(base64);
+      };
+
       // Decodificar header
-      const header = JSON.parse(atob(parts[0]));
+      const header = JSON.parse(base64UrlDecode(parts[0]));
       
       // Decodificar payload
-      const payload = JSON.parse(atob(parts[1]));
+      const payload = JSON.parse(base64UrlDecode(parts[1]));
 
       this.decodedToken = {
         header: header,
@@ -538,14 +586,14 @@ export class ProtectedDataComponent implements OnInit {
           issuer: payload.iss,
           audience: payload.aud,
           subject: payload.sub,
-          scopes: payload.scp || payload.scope || 'No disponible'
+          scopes: payload.scp || payload.scope || payload.authorities || 'No disponible'
         }
       };
 
-      console.log('Token decodificado:', this.decodedToken);
-    } catch (err) {
-      console.error('Error decodificando token:', err);
-      this.error = 'Error decodificando el token JWT';
+      console.log('✅ Token decodificado correctamente:', this.decodedToken);
+    } catch (err: any) {
+      console.error('❌ Error decodificando token:', err);
+      this.error = `Error decodificando el token JWT: ${err.message}`;
     }
   }
 }

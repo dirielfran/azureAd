@@ -1,6 +1,9 @@
 package com.example.apiprotegida.security;
 
 import com.example.apiprotegida.model.Usuario;
+import com.example.apiprotegida.model.Perfil;
+import com.example.apiprotegida.model.Permiso;
+import com.example.apiprotegida.repository.UsuarioRepository;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
 import com.auth0.jwt.algorithms.Algorithm;
@@ -9,6 +12,7 @@ import com.auth0.jwt.exceptions.TokenExpiredException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -17,8 +21,10 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import static com.example.apiprotegida.security.SecurityConstant.*;
@@ -35,21 +41,66 @@ public class JWTTokenProvider {
     @Value("${jwt.secret:defaultSecretKeyForJWTTokenGeneration123456789}")
     private String secret;
 
+    @Autowired
+    private UsuarioRepository usuarioRepository;
+
     /**
      * Genera un token JWT para un usuario
      * @param usuario El usuario para el cual generar el token
      * @return Token JWT con prefijo Bearer
      */
     public String generateJwtToken(Usuario usuario) {
-        String perfil = "Usuario Básico"; // Perfil por defecto para usuarios locales
-
-        // Permisos por defecto para usuarios locales
-        List<String> authorities = List.of("USUARIOS_LEER", "DASHBOARD_LEER");
-
+        log.info("🔑 [JWTTokenProvider] Generando token para usuario: {}", usuario.getEmail());
+        
+        // Recargar el usuario con sus perfiles y permisos desde la base de datos
+        Usuario usuarioConPerfiles = usuarioRepository.findByEmailWithPerfiles(usuario.getEmail())
+                .orElse(usuario);
+        
+        // Obtener perfiles del usuario
+        Set<Perfil> perfiles = usuarioConPerfiles.getPerfiles();
+        String nombrePerfil = perfiles.isEmpty() ? "Usuario Básico" : 
+                              perfiles.iterator().next().getNombre();
+        
+        log.info("📋 [JWTTokenProvider] Perfiles del usuario: {}", 
+                perfiles.stream().map(Perfil::getNombre).collect(Collectors.joining(", ")));
+        
+        // Construir lista de authorities (roles + permisos)
+        List<String> authorities = new ArrayList<>();
+        
+        // Siempre agregar rol USER para que Spring Security lo reconozca
+        authorities.add("ROLE_USER");
+        
+        // Agregar permisos de todos los perfiles del usuario
+        for (Perfil perfil : perfiles) {
+            for (Permiso permiso : perfil.getPermisos()) {
+                if (permiso.getActivo()) {
+                    authorities.add(permiso.getCodigo());
+                }
+            }
+        }
+        
+        // Si el usuario es admin (tiene perfil de Administrador), agregar ROLE_ADMIN
+        boolean isAdmin = perfiles.stream()
+                .anyMatch(p -> p.getNombre().equalsIgnoreCase("Administrador") || 
+                              p.getNombre().equalsIgnoreCase("Admin"));
+        if (isAdmin) {
+            authorities.add("ROLE_ADMIN");
+        }
+        
+        // Si el usuario es manager/gestor, agregar ROLE_MANAGER
+        boolean isManager = perfiles.stream()
+                .anyMatch(p -> p.getNombre().equalsIgnoreCase("Gestor") || 
+                              p.getNombre().equalsIgnoreCase("Manager"));
+        if (isManager) {
+            authorities.add("ROLE_MANAGER");
+        }
+        
+        log.info("🔑 [JWTTokenProvider] Authorities generadas: {}", authorities);
+        
         return TOKEN_PREFIX + JWT.create()
                 .withIssuer(API_TYC)
                 .withSubject(usuario.getEmail())
-                .withClaim("perfil", perfil)
+                .withClaim("perfil", nombrePerfil)
                 .withArrayClaim(AUTHORITIES, authorities.toArray(new String[0]))
                 .withIssuedAt(new Date())
                 .withExpiresAt(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
