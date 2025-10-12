@@ -32,10 +32,11 @@ public class RoleAnnotations {
 
     /**
      * Permite acceso a usuarios con rol ADMIN, MANAGER o USER
+     * O simplemente cualquier usuario autenticado
      */
     @Target(ElementType.METHOD)
     @Retention(RetentionPolicy.RUNTIME)
-    @PreAuthorize("hasAnyRole('ADMIN', 'MANAGER', 'USER')")
+    @PreAuthorize("isAuthenticated()")
     public @interface AdminManagerOrUser {
     }
 
@@ -51,10 +52,11 @@ public class RoleAnnotations {
     /**
      * Permite acceso a usuarios con scope access_as_user (Azure AD) 
      * O con permisos de usuarios locales (JWT)
+     * O simplemente cualquier usuario autenticado
      */
     @Target(ElementType.METHOD)
     @Retention(RetentionPolicy.RUNTIME)
-    @PreAuthorize("hasAuthority('SCOPE_access_as_user') or hasAnyAuthority('USUARIOS_LEER', 'DASHBOARD_LEER', 'ADMIN')")
+    @PreAuthorize("isAuthenticated()")
     public @interface ValidScope {
     }
 

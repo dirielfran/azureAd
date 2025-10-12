@@ -102,9 +102,26 @@ export class AuthSelectorComponent implements OnInit {
         localStorage.removeItem('msal.interaction.status');
       }
       
-      // Iniciar login con Azure AD
-      this.msalService.loginRedirect({
+      // Iniciar login con Azure AD usando popup (mejor para desarrollo y producción)
+      this.msalService.loginPopup({
         scopes: ['user.read', 'api://4a12fbd8-bf63-4c12-be4c-9678b207fbe7/access_as_user']
+      }).subscribe({
+        next: (result) => {
+          console.log('✅ [AuthSelector] Login con popup exitoso');
+          console.log('👤 [AuthSelector] Usuario autenticado:', result.account?.username);
+          // Redirigir al dashboard
+          this.router.navigate(['/mis-permisos']);
+        },
+        error: (error) => {
+          console.error('❌ [AuthSelector] Error en login popup:', error);
+          if (error.errorCode === 'user_cancelled') {
+            this.errorMessage = 'Inicio de sesión cancelado';
+          } else if (error.errorCode === 'popup_window_error') {
+            this.errorMessage = 'Error: Las ventanas emergentes están bloqueadas. Por favor permite popups para este sitio.';
+          } else {
+            this.errorMessage = 'Error al iniciar sesión con Azure AD: ' + (error.message || 'Error desconocido');
+          }
+        }
       });
     } catch (error) {
       console.error('❌ [AuthSelector] Error al iniciar login Azure:', error);

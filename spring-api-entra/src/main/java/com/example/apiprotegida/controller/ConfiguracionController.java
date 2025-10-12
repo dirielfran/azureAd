@@ -23,13 +23,13 @@ import java.util.Map;
 @CrossOrigin(origins = {"http://localhost:4200", "https://localhost:4200"})
 @Slf4j
 public class ConfiguracionController {
-    
+
     @Autowired
     private ConfiguracionService configuracionService;
-    
+
     @Value("${admin.token}")
     private String adminToken;
-    
+
 
 
     /**
@@ -43,20 +43,20 @@ public class ConfiguracionController {
             log.warn("🚨 Intento de acceso no autorizado con token inválido");
             return ResponseEntity.status(401).body(Map.of("error", "Token de administrador inválido"));
         }
-        
+
         log.info("🔒 [ADMIN] Configuración cambiada desde endpoint de administrador");
-        
+
         Boolean azureEnabled = (Boolean) config.get("azureEnabled");
         Boolean jwtLocalEnabled = (Boolean) config.get("jwtLocalEnabled");
-        
+
         // Validación de seguridad: al menos un método de autenticación debe estar activo
         boolean currentAzureEnabled = configuracionService.esAzureAdHabilitado();
         boolean currentJwtLocalEnabled = configuracionService.esJwtLocalHabilitado();
-        
+
         // Determinar el estado final después de los cambios
         boolean finalAzureEnabled = (azureEnabled != null) ? azureEnabled : currentAzureEnabled;
         boolean finalJwtLocalEnabled = (jwtLocalEnabled != null) ? jwtLocalEnabled : currentJwtLocalEnabled;
-        
+
         // Validar que al menos un método esté habilitado
         if (!finalAzureEnabled && !finalJwtLocalEnabled) {
             log.error("🚨 [SECURITY] Intento de deshabilitar todos los métodos de autenticación - OPERACIÓN RECHAZADA");
@@ -66,24 +66,24 @@ public class ConfiguracionController {
                 currentJwtLocalEnabled
             );
         }
-        
+
         // Aplicar cambios (las excepciones serán manejadas por GlobalExceptionHandler)
         if (azureEnabled != null) {
-            configuracionService.establecerAzureAdHabilitado(azureEnabled);
+            configuracionService.establecerAzureAdHabilitado(azureEnabled, jwtLocalEnabled);
             log.info("🔧 [CONFIG] Azure AD {} por administrador", azureEnabled ? "habilitado" : "deshabilitado");
         }
-        
+
         if (jwtLocalEnabled != null) {
-            configuracionService.establecerJwtLocalHabilitado(jwtLocalEnabled);
+            configuracionService.establecerJwtLocalHabilitado(jwtLocalEnabled, azureEnabled);
             log.info("🔧 [CONFIG] JWT Local {} por administrador", jwtLocalEnabled ? "habilitado" : "deshabilitado");
         }
-        
+
         Map<String, Object> response = new HashMap<>();
         response.put("mensaje", "Configuración actualizada exitosamente");
         response.put("azureAdHabilitado", configuracionService.esAzureAdHabilitado());
         response.put("jwtLocalHabilitado", configuracionService.esJwtLocalHabilitado());
         response.put("timestamp", System.currentTimeMillis());
-        
+
         return ResponseEntity.ok(response);
     }
 
@@ -93,16 +93,16 @@ public class ConfiguracionController {
     @GetMapping("/auth/status")
     public ResponseEntity<Map<String, Object>> obtenerEstadoAutenticacion() {
         log.info("📊 Consultando estado de métodos de autenticación");
-        
+
         Map<String, Object> status = new HashMap<>();
         status.put("azureAdHabilitado", configuracionService.esAzureAdHabilitado());
         status.put("jwtLocalHabilitado", configuracionService.esJwtLocalHabilitado());
         status.put("timestamp", System.currentTimeMillis());
-        
+
         return ResponseEntity.ok(status);
     }
-    
-    
+
+
     /**
      * Obtiene todas las configuraciones de autenticación
      * Solo administradores
@@ -113,7 +113,7 @@ public class ConfiguracionController {
         log.info("📋 Consultando todas las configuraciones de autenticación");
         return ResponseEntity.ok(configuracionService.obtenerConfiguracionesAutenticacion());
     }
-    
+
     /**
      * Obtiene todas las configuraciones activas del sistema
      * Solo administradores
@@ -124,7 +124,7 @@ public class ConfiguracionController {
         log.info("📋 Consultando todas las configuraciones del sistema");
         return ResponseEntity.ok(configuracionService.obtenerTodasActivas());
     }
-    
+
     /**
      * Actualiza el valor de una configuración específica
      * Solo administradores
@@ -134,14 +134,14 @@ public class ConfiguracionController {
     public ResponseEntity<ConfiguracionSistema> actualizarConfiguracion(
             @PathVariable String clave,
             @RequestBody Map<String, String> request) {
-        
+
         String nuevoValor = request.get("valor");
         if (nuevoValor == null) {
             return ResponseEntity.badRequest().build();
         }
-        
+
         log.info("🔧 [ADMIN] Actualizando configuración: {} = {}", clave, nuevoValor);
-        
+
         try {
             ConfiguracionSistema config = configuracionService.actualizarValor(clave, nuevoValor);
             return ResponseEntity.ok(config);

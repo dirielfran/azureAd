@@ -25,7 +25,9 @@ export class AppComponent implements OnInit, OnDestroy {
     public authConfigService: AuthConfigService,
     public localAuthService: LocalAuthService,
     private router: Router
-  ) {}
+  ) {
+    // Con popup no necesitamos capturar hash - todo se maneja en la ventana popup
+  }
 
   async ngOnInit(): Promise<void> {
     console.log('🚀 [AppComponent] Inicializando aplicación...');
@@ -41,18 +43,20 @@ export class AppComponent implements OnInit, OnDestroy {
     // Cargar configuración de autenticación desde el backend
     await this.loadAuthConfiguration();
     
-    // Si Azure AD está habilitado, manejar redirects de MSAL manualmente
-    // Esto reemplaza el uso de MsalRedirectComponent en el bootstrap
+    // Con popup no necesitamos manejar redirects - la ventana popup maneja todo
     if (this.authMethod === 'azure') {
-      console.log('🔄 [AppComponent] Azure AD habilitado, manejando redirects de MSAL...');
-      try {
-        await this.msalService.instance.handleRedirectPromise();
-        console.log('✅ [AppComponent] Redirect de MSAL procesado exitosamente');
-      } catch (error) {
-        console.error('❌ [AppComponent] Error al manejar redirect de MSAL:', error);
+      console.log('✅ [AppComponent] Azure AD habilitado (modo popup)');
+      
+      // Verificar si ya hay cuentas autenticadas
+      const accounts = this.msalService.instance.getAllAccounts();
+      console.log('📊 [AppComponent] Cuentas totales en MSAL:', accounts.length);
+      if (accounts.length > 0) {
+        console.log('👥 [AppComponent] Usuario ya autenticado:', accounts[0].username);
       }
+    } else if (this.authMethod === 'local') {
+      console.log('✅ [AppComponent] JWT Local habilitado');
     } else {
-      console.log('ℹ️ [AppComponent] Azure AD deshabilitado, omitiendo MSAL');
+      console.log('ℹ️ [AppComponent] Ningún método de autenticación configurado');
     }
     
     // Verificar estado de autenticación según el método activo
@@ -69,8 +73,18 @@ export class AppComponent implements OnInit, OnDestroy {
       console.log('✅ [AppComponent] Usuario completamente autenticado y autorizado');
     } else {
       console.log('❌ [AppComponent] Usuario no autenticado -->', this.router.url);
-      // Redirigir al login apropiado si no está autenticado
+      
+      // Verificar si estamos procesando un callback de Microsoft (tiene parámetros de OAuth)
       const currentUrl = this.router.url;
+      const isOAuthCallback = currentUrl.includes('code=') || currentUrl.includes('state=') || currentUrl.includes('error=');
+      
+      if (isOAuthCallback && this.authMethod === 'azure') {
+        console.log('🔄 [AppComponent] Procesando callback de Microsoft, no redirigir...');
+        // No hacer nada, dejar que MSAL termine de procesar
+        return;
+      }
+      
+      // Redirigir al login apropiado si no está autenticado
       const publicRoutes = ['/auth-selector', '/login'];
       
       // Si no está en una ruta pública, redirigir según el método de autenticación
@@ -78,8 +92,11 @@ export class AppComponent implements OnInit, OnDestroy {
         if (this.authMethod === 'local') {
           console.log('🔀 [AppComponent] Redirigiendo a login local...');
           this.router.navigate(['/login']);
+        } else if (this.authMethod === 'azure') {
+          console.log('🔀 [AppComponent] Azure AD activo pero no autenticado, redirigiendo a selector...');
+          this.router.navigate(['/auth-selector']);
         } else {
-          console.log('🔀 [AppComponent] Redirigiendo a selector de autenticación...');
+          console.log('🔀 [AppComponent] Sin método configurado, redirigiendo a selector...');
           this.router.navigate(['/auth-selector']);
         }
       }
@@ -244,6 +261,15 @@ export class AppComponent implements OnInit, OnDestroy {
         console.log('🔑 [AppComponent] Permisos del usuario:', userInfo.permisos);
         console.log('📋 [AppComponent] Códigos de permisos:', userInfo.codigosPermisos);
         this.isInitializingPermissions = false;
+        
+        // Redirigir al dashboard si estamos en una ruta pública (auth-selector o login)
+        const currentUrl = this.router.url;
+        const publicRoutes = ['/auth-selector', '/login', '/'];
+        
+        if (publicRoutes.some(route => currentUrl === route || currentUrl.startsWith(route + '?'))) {
+          console.log('🔀 [AppComponent] Permisos cargados, redirigiendo al dashboard...');
+          this.router.navigate(['/mis-permisos']);
+        }
       },
       error: (error) => {
         console.error('❌ [AppComponent] Error al inicializar permisos:', error);

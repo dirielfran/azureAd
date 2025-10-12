@@ -39,13 +39,29 @@ export class AuthGuard implements CanActivate {
     
     // Verificar según el método de autenticación activo
     if (authMethod === 'azure') {
+      // Con popup no necesitamos detectar callbacks - la ventana popup maneja todo
+      
       // Verificar autenticación con Azure AD
       const isAuthenticated = this.msalService.instance.getAllAccounts().length > 0;
       console.log('🔐 [AuthGuard] Azure AD - Autenticado:', isAuthenticated);
       
       if (!isAuthenticated) {
-        console.log('❌ [AuthGuard] No autenticado con Azure, iniciando login...');
-        this.msalService.loginRedirect();
+        console.log('❌ [AuthGuard] No autenticado con Azure, iniciando login con popup...');
+        
+        // Usar popup en lugar de redirect - mejor para desarrollo y producción
+        this.msalService.loginPopup().subscribe({
+          next: (result) => {
+            console.log('✅ [AuthGuard] Login con popup exitoso');
+            console.log('👤 [AuthGuard] Usuario autenticado:', result.account?.username);
+            // Redirigir a la ruta solicitada
+            this.router.navigate([state.url]);
+          },
+          error: (error) => {
+            console.error('❌ [AuthGuard] Error en login popup:', error);
+            // Si el usuario cierra el popup, redirigir al selector
+            this.router.navigate(['/auth-selector']);
+          }
+        });
         return false;
       }
       

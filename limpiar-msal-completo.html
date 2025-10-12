@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Limpiar MSAL Completo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 700px;
+            margin: 50px auto;
+            padding: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: bold;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        .warning {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        #result {
+            margin-top: 30px;
+            padding: 20px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            display: none;
+            border-left: 4px solid #667eea;
+        }
+        #result.show {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .item {
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .item:last-child {
+            border-bottom: none;
+        }
+        .emoji {
+            font-size: 24px;
+            margin-right: 10px;
+        }
+        .count {
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Limpieza Completa de MSAL</h1>
+        <p class="subtitle">Esta herramienta limpiará todos los datos de MSAL y Azure AD del navegador</p>
+        
+        <div class="button-group">
+            <button onclick="limpiarTodo()">
+                🔥 Limpiar TODO
+            </button>
+            <button class="success" onclick="irALogin()">
+                🚀 Ir a la App
+            </button>
+        </div>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        function limpiarTodo() {
+            const result = document.getElementById('result');
+            let cleaned = [];
+            let total = 0;
+
+            console.log('🧹 Iniciando limpieza completa de MSAL...');
+
+            // 1. Limpiar localStorage
+            const localStorageKeys = Object.keys(localStorage);
+            console.log(`📦 Claves en localStorage: ${localStorageKeys.length}`);
+            
+            localStorageKeys.forEach(key => {
+                if (key.includes('msal') || 
+                    key.includes('interaction') || 
+                    key.includes('microsoft') || 
+                    key.includes('login.windows') ||
+                    key.includes('login.microsoftonline') ||
+                    key.includes('auth_config') ||
+                    key.includes('msal_last_processed_code')) {
+                    localStorage.removeItem(key);
+                    cleaned.push(key);
+                    total++;
+                    console.log(`  ✅ Removido de localStorage: ${key}`);
+                }
+            });
+
+            // 2. Limpiar sessionStorage
+            const sessionStorageKeys = Object.keys(sessionStorage);
+            console.log(`📦 Claves en sessionStorage: ${sessionStorageKeys.length}`);
+            
+            sessionStorageKeys.forEach(key => {
+                sessionStorage.removeItem(key);
+                total++;
+                console.log(`  ✅ Removido de sessionStorage: ${key}`);
+            });
+
+            // 3. Mostrar resultado
+            if (total > 0) {
+                result.innerHTML = `
+                    <h3><span class="emoji">✅</span> Limpieza Completada</h3>
+                    <p><span class="count">${total}</span> elementos eliminados</p>
+                    <div style="margin-top: 20px;">
+                        <strong>Elementos limpiados:</strong>
+                        ${cleaned.map(key => `<div class="item">🗑️ ${key}</div>`).join('')}
+                    </div>
+                    <p style="margin-top: 20px; color: #28a745; font-weight: bold;">
+                        ✅ Todo listo! Ahora puedes volver a la aplicación.
+                    </p>
+                `;
+            } else {
+                result.innerHTML = `
+                    <h3><span class="emoji">ℹ️</span> No Había Nada que Limpiar</h3>
+                    <p>El navegador ya estaba limpio.</p>
+                `;
+            }
+            
+            result.className = 'show';
+            console.log(`✅ Limpieza completa! Total: ${total} elementos`);
+        }
+
+        function irALogin() {
+            window.location.href = 'http://localhost:4200';
+        }
+
+        // Auto-limpiar al cargar la página
+        window.onload = function() {
+            console.log('🔍 Verificando si hay datos de MSAL para limpiar...');
+            const msalKeys = Object.keys(localStorage).filter(k => 
+                k.includes('msal') || k.includes('interaction')
+            );
+            if (msalKeys.length > 0) {
+                console.log(`⚠️ Se encontraron ${msalKeys.length} claves de MSAL`);
+            } else {
+                console.log('✅ No hay claves de MSAL en localStorage');
+            }
+        };
+    </script>
+</body>
+</html>
+
+

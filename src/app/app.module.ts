@@ -120,6 +120,20 @@ export function MSALInstanceFactory(): IPublicClientApplication {
     }
   }
   
+  // Limpiar el flag de "interaction_in_progress" si existe
+  // Esto previene errores después de hot reloads de Angular
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.includes('interaction.status')) {
+        console.warn('⚠️ [MSALInstanceFactory] Limpiando flag de interacción en progreso:', key);
+        localStorage.removeItem(key);
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ [MSALInstanceFactory] Error al limpiar flags de interacción');
+  }
+  
   return new PublicClientApplication(environment.msalConfig);
 }
 

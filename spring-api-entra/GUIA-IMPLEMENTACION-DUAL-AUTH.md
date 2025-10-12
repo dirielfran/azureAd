@@ -975,3 +975,4 @@ Si implementas esto en otro proyecto y tienes dudas:
 **Versión**: 1.0 - Guía Completa de Implementación
 
 
+

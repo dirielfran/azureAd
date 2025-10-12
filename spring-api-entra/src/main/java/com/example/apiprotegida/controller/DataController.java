@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 
 /**
  * Controlador para endpoints de datos protegidos
- * 
+ *
  * Proporciona varios endpoints de ejemplo para demostrar
  * la integración con Microsoft Entra ID desde Angular.
  */
@@ -32,24 +32,24 @@ public class DataController {
     @RoleAnnotations.ValidScope
     public ResponseEntity<Map<String, Object>> getData(Authentication authentication) {
         Map<String, Object> data = new HashMap<>();
-        
+
         data.put("message", "¡Datos obtenidos exitosamente desde la API protegida!");
         data.put("timestamp", LocalDateTime.now());
         data.put("server", "Spring Boot API");
         data.put("version", "1.0.0");
-        
+
         if (authentication.getPrincipal() instanceof Jwt jwt) {
             data.put("user", jwt.getClaimAsString("name"));
             data.put("email", jwt.getClaimAsString("email"));
         }
-        
+
         // Datos de ejemplo
         data.put("datos_ejemplo", Arrays.asList(
             Map.of("id", 1, "nombre", "Producto A", "precio", 29.99, "categoria", "Electrónicos"),
             Map.of("id", 2, "nombre", "Producto B", "precio", 19.99, "categoria", "Hogar"),
             Map.of("id", 3, "nombre", "Producto C", "precio", 39.99, "categoria", "Deportes")
         ));
-        
+
         return ResponseEntity.ok(data);
     }
 
@@ -58,10 +58,10 @@ public class DataController {
      * @return Datos para un dashboard
      */
     @GetMapping("/dashboard")
-    @RoleAnnotations.AdminManagerOrUser
+    @PreAuthorize("hasAnyAuthority('SCOPE_access_as_user', 'ADMIN', 'PERFILES_LEER')")
     public ResponseEntity<Map<String, Object>> getDashboardData() {
         Map<String, Object> dashboard = new HashMap<>();
-        
+
         // Métricas de ejemplo
         dashboard.put("metricas", Map.of(
             "ventas_mes", 15420.50,
@@ -69,7 +69,7 @@ public class DataController {
             "pedidos_pendientes", 23,
             "productos_stock", 156
         ));
-        
+
         // Gráfico de ventas (datos de ejemplo)
         List<Map<String, Object>> ventasPorDia = new ArrayList<>();
         for (int i = 1; i <= 7; i++) {
@@ -79,7 +79,7 @@ public class DataController {
             ));
         }
         dashboard.put("ventas_por_dia", ventasPorDia);
-        
+
         // Top productos
         dashboard.put("top_productos", Arrays.asList(
             Map.of("nombre", "Laptop Gaming", "ventas", 45),
@@ -88,9 +88,9 @@ public class DataController {
             Map.of("nombre", "Monitor 4K", "ventas", 28),
             Map.of("nombre", "Webcam HD", "ventas", 21)
         ));
-        
+
         dashboard.put("ultima_actualizacion", LocalDateTime.now());
-        
+
         return ResponseEntity.ok(dashboard);
     }
 
@@ -102,7 +102,7 @@ public class DataController {
     public ResponseEntity<Map<String, Object>> procesoLento() throws InterruptedException {
         // Simular procesamiento
         Thread.sleep(2000); // 2 segundos
-        
+
         Map<String, Object> resultado = new HashMap<>();
         resultado.put("message", "Proceso completado exitosamente");
         resultado.put("duracion", "2 segundos");
@@ -113,7 +113,7 @@ public class DataController {
             "errores", 13,
             "porcentaje_exito", 98.7
         ));
-        
+
         return ResponseEntity.ok(resultado);
     }
 
@@ -126,13 +126,13 @@ public class DataController {
     @RoleAnnotations.AdminOrManager
     public ResponseEntity<Map<String, Object>> createData(@RequestBody Map<String, Object> datos) {
         Map<String, Object> response = new HashMap<>();
-        
+
         response.put("message", "Datos creados exitosamente");
         response.put("id", UUID.randomUUID().toString());
         response.put("datos_recibidos", datos);
         response.put("timestamp", LocalDateTime.now());
         response.put("status", "created");
-        
+
         return ResponseEntity.ok(response);
     }
 
@@ -143,7 +143,7 @@ public class DataController {
     @GetMapping("/config")
     public ResponseEntity<Map<String, Object>> getConfig(Authentication authentication) {
         Map<String, Object> config = new HashMap<>();
-        
+
         config.put("app_name", "API Protegida Demo");
         config.put("version", "1.0.0");
         config.put("features", Arrays.asList(
@@ -153,7 +153,7 @@ public class DataController {
             "Base de datos H2",
             "Swagger documentation"
         ));
-        
+
         // Configuración específica del usuario
         if (authentication.getPrincipal() instanceof Jwt jwt) {
             Map<String, Object> userConfig = new HashMap<>();
@@ -161,10 +161,10 @@ public class DataController {
             userConfig.put("language", "es");
             userConfig.put("notifications", true);
             userConfig.put("user_id", jwt.getClaimAsString("oid"));
-            
+
             config.put("user_preferences", userConfig);
         }
-        
+
         return ResponseEntity.ok(config);
     }
 
@@ -176,7 +176,7 @@ public class DataController {
     @GetMapping("/reportes/{tipo}")
     public ResponseEntity<Map<String, Object>> getReporte(@PathVariable String tipo) {
         Map<String, Object> reporte = new HashMap<>();
-        
+
         switch (tipo.toLowerCase()) {
             case "ventas":
                 reporte.put("titulo", "Reporte de Ventas");
@@ -185,7 +185,7 @@ public class DataController {
                 reporte.put("transacciones", 156);
                 reporte.put("promedio_por_venta", 290.26);
                 break;
-                
+
             case "usuarios":
                 reporte.put("titulo", "Reporte de Usuarios");
                 reporte.put("total_usuarios", 1247);
@@ -193,7 +193,7 @@ public class DataController {
                 reporte.put("nuevos_este_mes", 89);
                 reporte.put("tasa_retencion", 92.7);
                 break;
-                
+
             case "productos":
                 reporte.put("titulo", "Reporte de Productos");
                 reporte.put("total_productos", 234);
@@ -201,17 +201,17 @@ public class DataController {
                 reporte.put("agotados", 36);
                 reporte.put("mas_vendido", "Laptop Gaming");
                 break;
-                
+
             default:
                 return ResponseEntity.badRequest().body(Map.of(
                     "error", "Tipo de reporte no válido",
                     "tipos_disponibles", Arrays.asList("ventas", "usuarios", "productos")
                 ));
         }
-        
+
         reporte.put("generado_en", LocalDateTime.now());
         reporte.put("tipo", tipo);
-        
+
         return ResponseEntity.ok(reporte);
     }
 
@@ -223,11 +223,11 @@ public class DataController {
     @RoleAnnotations.ValidScope
     public ResponseEntity<Map<String, Object>> debugAuth(Authentication authentication) {
         Map<String, Object> debug = new HashMap<>();
-        
+
         debug.put("authenticated", authentication.isAuthenticated());
         debug.put("authorities", authentication.getAuthorities());
         debug.put("principal_type", authentication.getPrincipal().getClass().getSimpleName());
-        
+
         if (authentication.getPrincipal() instanceof Jwt jwt) {
             debug.put("jwt_claims", jwt.getClaims());
             debug.put("groups_claim", jwt.getClaimAsStringList("groups"));
@@ -235,25 +235,25 @@ public class DataController {
             debug.put("scopes", jwt.getClaimAsStringList("scp"));
             debug.put("user_email", jwt.getClaimAsString("email"));
             debug.put("user_name", jwt.getClaimAsString("name"));
-            
+
             // Análisis específico de roles
             List<String> roleAuthorities = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .filter(auth -> auth.startsWith("ROLE_"))
                 .collect(Collectors.toList());
             debug.put("role_authorities", roleAuthorities);
-            
+
             // Verificar si tiene los roles necesarios para AdminManagerOrUser
             boolean hasAdminRole = roleAuthorities.contains("ROLE_ADMIN");
             boolean hasManagerRole = roleAuthorities.contains("ROLE_MANAGER");
             boolean hasUserRole = roleAuthorities.contains("ROLE_USER");
-            
+
             debug.put("has_admin_role", hasAdminRole);
             debug.put("has_manager_role", hasManagerRole);
             debug.put("has_user_role", hasUserRole);
             debug.put("can_access_dashboard", hasAdminRole || hasManagerRole || hasUserRole);
         }
-        
+
         return ResponseEntity.ok(debug);
     }
 
@@ -264,7 +264,7 @@ public class DataController {
     @GetMapping("/health")
     public ResponseEntity<Map<String, Object>> healthCheck() {
         Map<String, Object> health = new HashMap<>();
-        
+
         health.put("status", "UP");
         health.put("timestamp", LocalDateTime.now());
         health.put("uptime", System.currentTimeMillis());
@@ -273,7 +273,7 @@ public class DataController {
             "authentication", "UP",
             "external_apis", "UP"
         ));
-        
+
         return ResponseEntity.ok(health);
     }
 
@@ -289,7 +289,7 @@ public class DataController {
     @RoleAnnotations.AdminOnly
     public ResponseEntity<Map<String, Object>> getAdminSensitiveData() {
         Map<String, Object> adminData = new HashMap<>();
-        
+
         adminData.put("message", "🔐 Datos administrativos sensibles");
         adminData.put("server_config", Map.of(
             "database_connections", 25,
@@ -304,7 +304,7 @@ public class DataController {
         ));
         adminData.put("access_level", "ADMIN_ONLY");
         adminData.put("timestamp", LocalDateTime.now());
-        
+
         return ResponseEntity.ok(adminData);
     }
 
@@ -316,7 +316,7 @@ public class DataController {
     @RoleAnnotations.AdminOrManager
     public ResponseEntity<Map<String, Object>> getManagerReports() {
         Map<String, Object> managerData = new HashMap<>();
-        
+
         managerData.put("message", "📊 Reportes de gestión");
         managerData.put("sales_summary", Map.of(
             "total_sales", 125600.75,
@@ -331,7 +331,7 @@ public class DataController {
         ));
         managerData.put("access_level", "MANAGER_OR_ADMIN");
         managerData.put("timestamp", LocalDateTime.now());
-        
+
         return ResponseEntity.ok(managerData);
     }
 
@@ -343,7 +343,7 @@ public class DataController {
     @RoleAnnotations.AdminManagerOrUser
     public ResponseEntity<Map<String, Object>> getUserProfileData(Authentication authentication) {
         Map<String, Object> userData = new HashMap<>();
-        
+
         if (authentication.getPrincipal() instanceof Jwt jwt) {
             userData.put("message", "👤 Datos de perfil de usuario");
             userData.put("user_info", Map.of(
@@ -364,10 +364,10 @@ public class DataController {
                 "Descargó reporte - " + LocalDateTime.now().minusDays(3)
             ));
         }
-        
+
         userData.put("access_level", "USER_OR_HIGHER");
         userData.put("timestamp", LocalDateTime.now());
-        
+
         return ResponseEntity.ok(userData);
     }
 
@@ -379,13 +379,13 @@ public class DataController {
     @PreAuthorize("hasRole('ADMIN') or (hasRole('MANAGER') and authentication.name.contains('manager'))")
     public ResponseEntity<Map<String, Object>> getConditionalAccess(Authentication authentication) {
         Map<String, Object> data = new HashMap<>();
-        
+
         data.put("message", "🎯 Acceso condicional concedido");
         data.put("condition", "ADMIN OR (MANAGER + email contains 'manager')");
         data.put("user", authentication.getName());
         data.put("authorities", authentication.getAuthorities());
         data.put("access_granted_at", LocalDateTime.now());
-        
+
         return ResponseEntity.ok(data);
     }
 }

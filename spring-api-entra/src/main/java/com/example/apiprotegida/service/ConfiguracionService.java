@@ -18,16 +18,16 @@ import java.util.Optional;
 @Service
 @Slf4j
 public class ConfiguracionService {
-    
+
     @Autowired
     private ConfiguracionSistemaRepository configuracionRepository;
-    
+
     // Claves de configuración
     public static final String AUTH_AZURE_AD_ENABLED = "auth.azure.enabled";
     public static final String AUTH_JWT_LOCAL_ENABLED = "auth.jwt.local.enabled";
     public static final String AUTH_REQUIRE_MFA = "auth.require.mfa";
     public static final String AUTH_SESSION_TIMEOUT = "auth.session.timeout";
-    
+
     /**
      * Obtiene una configuración por su clave (con caché)
      */
@@ -37,7 +37,7 @@ public class ConfiguracionService {
         log.debug("Obteniendo configuración: {}", clave);
         return configuracionRepository.findByClave(clave);
     }
-    
+
     /**
      * Obtiene el valor de una configuración como String
      */
@@ -47,7 +47,7 @@ public class ConfiguracionService {
                 .map(ConfiguracionSistema::getValor)
                 .orElse(valorPorDefecto);
     }
-    
+
     /**
      * Obtiene el valor de una configuración como Boolean
      */
@@ -57,7 +57,7 @@ public class ConfiguracionService {
                 .map(ConfiguracionSistema::getValorBoolean)
                 .orElse(valorPorDefecto);
     }
-    
+
     /**
      * Verifica si Azure AD está habilitado
      */
@@ -67,7 +67,7 @@ public class ConfiguracionService {
         log.debug("Azure AD habilitado: {}", habilitado);
         return habilitado;
     }
-    
+
     /**
      * Verifica si JWT local está habilitado
      */
@@ -77,7 +77,7 @@ public class ConfiguracionService {
         log.debug("JWT Local habilitado: {}", habilitado);
         return habilitado;
     }
-    
+
     /**
      * Actualiza el valor de una configuración
      */
@@ -85,48 +85,54 @@ public class ConfiguracionService {
     @Transactional
     public ConfiguracionSistema actualizarValor(String clave, String nuevoValor) {
         log.info("Actualizando configuración: {} = {}", clave, nuevoValor);
-        
+
         ConfiguracionSistema config = configuracionRepository.findByClave(clave)
                 .orElseThrow(() -> new IllegalArgumentException("Configuración no encontrada: " + clave));
-        
+
         config.setValor(nuevoValor);
         return configuracionRepository.save(config);
     }
-    
+
     /**
      * Habilita o deshabilita Azure AD con validación de seguridad
      */
     @CacheEvict(value = "configuracion", key = "T(com.example.apiprotegida.service.ConfiguracionService).AUTH_AZURE_AD_ENABLED")
     @Transactional
-    public void establecerAzureAdHabilitado(boolean habilitado) {
+    public void establecerAzureAdHabilitado(boolean habilitado, Boolean jwtLocalEnabledNuevo) {
         log.info("🔧 Cambiando estado de Azure AD a: {}", habilitado);
-        
+
+        // Determinar el estado final de JWT Local (nuevo o actual)
+        boolean jwtLocalFinal = (jwtLocalEnabledNuevo != null) ? jwtLocalEnabledNuevo : esJwtLocalHabilitado();
+
         // Validación de seguridad: verificar que no se deshabiliten todos los métodos
-        if (!habilitado && !esJwtLocalHabilitado()) {
-            log.error("🚨 [SECURITY] Intento de deshabilitar Azure AD cuando JWT Local ya está deshabilitado");
+        if (!habilitado && !jwtLocalFinal) {
+            log.error("🚨 [SECURITY] Intento de deshabilitar Azure AD cuando JWT Local también estará deshabilitado");
             throw new IllegalStateException("No se puede deshabilitar Azure AD cuando JWT Local está deshabilitado. Al menos un método de autenticación debe estar activo.");
         }
-        
+
         actualizarValor(AUTH_AZURE_AD_ENABLED, String.valueOf(habilitado));
     }
-    
+
     /**
      * Habilita o deshabilita JWT Local con validación de seguridad
      */
     @CacheEvict(value = "configuracion", key = "T(com.example.apiprotegida.service.ConfiguracionService).AUTH_JWT_LOCAL_ENABLED")
     @Transactional
-    public void establecerJwtLocalHabilitado(boolean habilitado) {
+    public void establecerJwtLocalHabilitado(boolean habilitado, Boolean azureEnabledNuevo) {
         log.info("🔧 Cambiando estado de JWT Local a: {}", habilitado);
-        
+
+        // Determinar el estado final de Azure AD (nuevo o actual)
+        boolean azureFinal = (azureEnabledNuevo != null) ? azureEnabledNuevo : esAzureAdHabilitado();
+
         // Validación de seguridad: verificar que no se deshabiliten todos los métodos
-        if (!habilitado && !esAzureAdHabilitado()) {
-            log.error("🚨 [SECURITY] Intento de deshabilitar JWT Local cuando Azure AD ya está deshabilitado");
+        if (!habilitado && !azureFinal) {
+            log.error("🚨 [SECURITY] Intento de deshabilitar JWT Local cuando Azure AD también estará deshabilitado");
             throw new IllegalStateException("No se puede deshabilitar JWT Local cuando Azure AD está deshabilitado. Al menos un método de autenticación debe estar activo.");
         }
-        
+
         actualizarValor(AUTH_JWT_LOCAL_ENABLED, String.valueOf(habilitado));
     }
-    
+
     /**
      * Obtiene todas las configuraciones de autenticación
      */
@@ -134,7 +140,7 @@ public class ConfiguracionService {
     public List<ConfiguracionSistema> obtenerConfiguracionesAutenticacion() {
         return configuracionRepository.findByCategoriaAndActivoTrue("AUTENTICACION");
     }
-    
+
     /**
      * Obtiene todas las configuraciones activas
      */
