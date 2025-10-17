@@ -2,6 +2,7 @@ package com.example.apiprotegida.service;
 
 import com.example.apiprotegida.model.Perfil;
 import com.example.apiprotegida.model.Permiso;
+import com.example.apiprotegida.repository.UsuarioRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -24,6 +25,9 @@ public class AuthorizationService {
 
     @Autowired
     private PermisoService permisoService;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
     /**
      * Obtiene los permisos del usuario autenticado basado en sus grupos de Azure AD
@@ -225,9 +229,10 @@ public class AuthorizationService {
     }
 
     /**
-     * Extrae el email del usuario del token JWT
+     * Extrae el email del usuario del token JWT o autenticación local
      */
     private String obtenerEmailUsuario(Authentication authentication) {
+        // Para autenticación Azure AD (JWT)
         if (authentication.getPrincipal() instanceof Jwt jwt) {
             String email = jwt.getClaimAsString("email");
             if (email == null) {
@@ -238,13 +243,20 @@ public class AuthorizationService {
             }
             return email != null ? email : "";
         }
+        
+        // Para autenticación local (String como principal)
+        if (authentication.getPrincipal() instanceof String email) {
+            return email;
+        }
+        
         return "";
     }
 
     /**
-     * Extrae el nombre del usuario del token JWT
+     * Extrae el nombre del usuario del token JWT o autenticación local
      */
     private String obtenerNombreUsuario(Authentication authentication) {
+        // Para autenticación Azure AD (JWT)
         if (authentication.getPrincipal() instanceof Jwt jwt) {
             String name = jwt.getClaimAsString("name");
             if (name == null) {
@@ -261,6 +273,19 @@ public class AuthorizationService {
             }
             return name != null ? name : "Usuario";
         }
+        
+        // Para autenticación local (String como principal)
+        if (authentication.getPrincipal() instanceof String email) {
+            try {
+                return usuarioRepository.findByEmail(email)
+                    .map(usuario -> usuario.getNombre() != null ? usuario.getNombre() : "Usuario")
+                    .orElse("Usuario");
+            } catch (Exception e) {
+                System.out.println("⚠️ Error al obtener nombre del usuario desde BD: " + e.getMessage());
+                return "Usuario";
+            }
+        }
+        
         return "Usuario";
     }
 }
