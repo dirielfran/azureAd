@@ -7,6 +7,8 @@ import { UserPermissionsComponent } from './components/user-permissions.componen
 import { AuthStatusComponent } from './components/auth-status.component';
 import { AuthSelectorComponent } from './components/auth-selector.component';
 import { LocalLoginComponent } from './components/local-login.component';
+import { ForgotPasswordComponent } from './components/forgot-password.component';
+import { ResetPasswordComponent } from './components/reset-password.component';
 import { PermissionGuard, AdminGuard, ManagerGuard } from './guards/permission.guard';
 import { AuthGuard } from './guards/auth.guard';
 
@@ -26,6 +28,24 @@ const routes: Routes = [
     component: LocalLoginComponent,
     data: {
       title: 'Iniciar sesión'
+    }
+  },
+
+  // Recuperación de contraseña
+  {
+    path: 'forgot-password',
+    component: ForgotPasswordComponent,
+    data: {
+      title: 'Recuperar contraseña'
+    }
+  },
+
+  // Reseteo de contraseña
+  {
+    path: 'reset-password',
+    component: ResetPasswordComponent,
+    data: {
+      title: 'Restablecer contraseña'
     }
   },
 

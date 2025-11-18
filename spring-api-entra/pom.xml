@@ -98,6 +98,12 @@
             <version>4.4.0</version>
         </dependency>
         
+        <!-- Spring Boot Mail (para recuperación de contraseña) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+        
         <!-- Lombok para reducir código boilerplate -->
         <dependency>
             <groupId>org.projectlombok</groupId>

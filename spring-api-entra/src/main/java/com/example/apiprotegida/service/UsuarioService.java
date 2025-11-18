@@ -177,4 +177,34 @@ public class UsuarioService {
         
         return usuarioRepository.findByDepartamento(departamento);
     }
+
+    /**
+     * Actualiza la contraseña de un usuario
+     * @param usuario Usuario al que se le actualizará la contraseña
+     * @param nuevaPassword Nueva contraseña en texto plano
+     */
+    @Transactional
+    public void actualizarPassword(Usuario usuario, String nuevaPassword) {
+        log.info("🔄 [UsuarioService] Actualizando contraseña para usuario: {}", usuario.getEmail());
+        
+        if (usuario == null) {
+            throw new IllegalArgumentException("El usuario no puede ser nulo");
+        }
+        
+        if (nuevaPassword == null || nuevaPassword.trim().isEmpty()) {
+            throw new IllegalArgumentException("La contraseña no puede estar vacía");
+        }
+        
+        // Validar longitud mínima de contraseña
+        if (nuevaPassword.length() < 6) {
+            throw new IllegalArgumentException("La contraseña debe tener al menos 6 caracteres");
+        }
+        
+        // Codificar y actualizar contraseña
+        String passwordEncriptada = passwordEncoder.encode(nuevaPassword);
+        usuario.setPassword(passwordEncriptada);
+        usuarioRepository.save(usuario);
+        
+        log.info("✅ [UsuarioService] Contraseña actualizada exitosamente para: {}", usuario.getEmail());
+    }
 }

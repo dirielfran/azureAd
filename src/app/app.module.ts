@@ -34,6 +34,8 @@ import { AccessDeniedComponent } from './components/access-denied.component';
 import { UserPermissionsComponent } from './components/user-permissions.component';
 import { AuthSelectorComponent } from './components/auth-selector.component';
 import { LocalLoginComponent } from './components/local-login.component';
+import { ForgotPasswordComponent } from './components/forgot-password.component';
+import { ResetPasswordComponent } from './components/reset-password.component';
 
 // Importar servicios de autorización
 import { AuthorizationService } from './services/authorization.service';
@@ -288,6 +290,8 @@ export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
     AuthStatusComponent,       // Componente para mostrar estado de autenticación
     AuthSelectorComponent,     // Componente selector de método de autenticación
     LocalLoginComponent,       // Componente de login local con JWT
+    ForgotPasswordComponent,   // Componente para solicitar recuperación de contraseña
+    ResetPasswordComponent,    // Componente para resetear contraseña
     // Directivas personalizadas
     HasPermissionDirective,    // Directiva para renderizado condicional por permisos
     IsAdminDirective,         // Directiva para contenido solo de administradores

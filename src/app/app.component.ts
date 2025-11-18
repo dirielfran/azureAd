@@ -85,10 +85,14 @@ export class AppComponent implements OnInit, OnDestroy {
       }
       
       // Redirigir al login apropiado si no está autenticado
-      const publicRoutes = ['/auth-selector', '/login'];
+      // Rutas públicas que no requieren autenticación
+      const publicRoutes = ['/auth-selector', '/login', '/forgot-password', '/reset-password'];
+      
+      // Verificar si la ruta actual es pública (incluyendo query params)
+      const isPublicRoute = publicRoutes.some(route => currentUrl.startsWith(route));
       
       // Si no está en una ruta pública, redirigir según el método de autenticación
-      if (!publicRoutes.includes(currentUrl)) {
+      if (!isPublicRoute) {
         if (this.authMethod === 'local') {
           console.log('🔀 [AppComponent] Redirigiendo a login local...');
           this.router.navigate(['/login']);

@@ -4,6 +4,7 @@ import com.example.apiprotegida.model.Usuario;
 import com.example.apiprotegida.repository.UsuarioRepository;
 import com.example.apiprotegida.security.JWTTokenProvider;
 import com.example.apiprotegida.service.ConfiguracionService;
+import com.example.apiprotegida.service.PasswordResetService;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -38,6 +39,9 @@ public class LocalAuthController {
 
     @Autowired
     private ConfiguracionService configuracionService;
+
+    @Autowired
+    private PasswordResetService passwordResetService;
 
     /**
      * Endpoint de login con JWT local
@@ -114,6 +118,104 @@ public class LocalAuthController {
     }
 
     /**
+     * Endpoint para solicitar recuperación de contraseña
+     * @param request Request con el email del usuario
+     * @return Respuesta indicando que se procesó la solicitud
+     */
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, String>> forgotPassword(@RequestBody ForgotPasswordRequest request) {
+        log.info("📧 [LocalAuth] Solicitud de recuperación de contraseña para: {}", request.getEmail());
+
+        try {
+            // Validar email
+            if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "El email es requerido"));
+            }
+
+            // Procesar solicitud (siempre retorna éxito por seguridad)
+            passwordResetService.solicitarRecuperacion(request.getEmail().trim());
+
+            // Por seguridad, siempre retornar el mismo mensaje
+            return ResponseEntity.ok(Map.of(
+                    "message", "Si el email existe en nuestro sistema, recibirás un enlace de recuperación"
+            ));
+
+        } catch (Exception e) {
+            log.error("❌ [LocalAuth] Error al procesar solicitud de recuperación: {}", e.getMessage(), e);
+            // Por seguridad, siempre retornar éxito
+            return ResponseEntity.ok(Map.of(
+                    "message", "Si el email existe en nuestro sistema, recibirás un enlace de recuperación"
+            ));
+        }
+    }
+
+    /**
+     * Endpoint para resetear contraseña con token
+     * @param request Request con token y nueva contraseña
+     * @return Respuesta indicando si el reseteo fue exitoso
+     */
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(@RequestBody ResetPasswordRequest request) {
+        log.info("🔄 [LocalAuth] Intento de reseteo de contraseña");
+
+        try {
+            // Validar campos
+            if (request.getToken() == null || request.getToken().trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "El token es requerido"));
+            }
+
+            if (request.getNewPassword() == null || request.getNewPassword().trim().length() < 6) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "La contraseña debe tener al menos 6 caracteres"));
+            }
+
+            // Validar token primero
+            if (!passwordResetService.validarToken(request.getToken())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "Token inválido o expirado"));
+            }
+
+            // Procesar reseteo
+            boolean exito = passwordResetService.resetearPassword(
+                    request.getToken().trim(),
+                    request.getNewPassword().trim()
+            );
+
+            if (exito) {
+                return ResponseEntity.ok(Map.of("message", "Contraseña actualizada exitosamente"));
+            } else {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("error", "No se pudo actualizar la contraseña. Verifica que el token sea válido."));
+            }
+
+        } catch (Exception e) {
+            log.error("❌ [LocalAuth] Error al resetear contraseña: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("error", "Error interno al procesar la solicitud"));
+        }
+    }
+
+    /**
+     * Endpoint para validar si un token de recuperación es válido
+     * @param request Request con el token
+     * @return true si el token es válido
+     */
+    @PostMapping("/validate-reset-token")
+    public ResponseEntity<Map<String, Boolean>> validateResetToken(@RequestBody Map<String, String> request) {
+        String token = request.get("token");
+        
+        if (token == null || token.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("valid", false));
+        }
+
+        boolean isValid = passwordResetService.validarToken(token.trim());
+        return ResponseEntity.ok(Map.of("valid", isValid));
+    }
+
+    /**
      * DTO para request de login
      */
     @Data
@@ -135,6 +237,27 @@ public class LocalAuthController {
         private String email;
         private String nombre;
         private String message;
+    }
+
+    /**
+     * DTO para solicitud de recuperación de contraseña
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ForgotPasswordRequest {
+        private String email;
+    }
+
+    /**
+     * DTO para reseteo de contraseña
+     */
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class ResetPasswordRequest {
+        private String token;
+        private String newPassword;
     }
 }
 

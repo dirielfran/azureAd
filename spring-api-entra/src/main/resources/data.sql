@@ -168,7 +168,7 @@ VALUES ('Carmen Jiménez', 'carmen.jimenez@empresa.com', 'azure-obj-id-10', 'Mar
 
 -- Configuraciones de autenticación
 INSERT INTO configuracion_sistema (clave, valor, descripcion, tipo, categoria, activo, fecha_creacion, fecha_actualizacion)
-VALUES ('auth.azure.enabled', 'true', 'Habilita/deshabilita autenticación con Azure AD', 'BOOLEAN', 'AUTENTICACION', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+VALUES ('auth.azure.enabled', 'false', 'Habilita/deshabilita autenticación con Azure AD', 'BOOLEAN', 'AUTENTICACION', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 INSERT INTO configuracion_sistema (clave, valor, descripcion, tipo, categoria, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('auth.jwt.local.enabled', 'true', 'Habilita/deshabilita autenticación JWT con usuarios locales', 'BOOLEAN', 'AUTENTICACION', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
@@ -195,7 +195,7 @@ VALUES ('sistema.version', '1.0.0', 'Versión del sistema', 'STRING', 'GENERAL',
 -- Hash BCrypt válido de "admin123" generado con strength 10
 -- NOTA: Este hash será reemplazado por el generado dinámicamente
 INSERT INTO usuarios (nombre, email, password, departamento, cargo, activo, fecha_creacion, fecha_actualizacion)
-VALUES ('Admin Local', 'admin@local.com', '$2a$10$9atsLDAx.xeTg030ObkVzeVurW.DGJDSYPPUslkT82Llp4KAAWdDW', 'IT', 'Administrador', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+VALUES ('Admin Local', 'dirielfran@gmail.com', '$2a$10$9atsLDAx.xeTg030ObkVzeVurW.DGJDSYPPUslkT82Llp4KAAWdDW', 'IT', 'Administrador', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
 
 INSERT INTO usuarios (nombre, email, password, departamento, cargo, activo, fecha_creacion, fecha_actualizacion)
 VALUES ('Usuario Local', 'user@local.com', '$2a$10$9atsLDAx.xeTg030ObkVzeVurW.DGJDSYPPUslkT82Llp4KAAWdDW', 'Ventas', 'Vendedor', true, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);

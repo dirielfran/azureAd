@@ -256,7 +256,20 @@
   .help-text {
     color: #666;
     font-size: 0.9rem;
-    margin: 0;
+    margin: 8px 0;
+  }
+  
+  .forgot-password-link {
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    
+    &:hover {
+      text-decoration: underline;
+      color: #764ba2;
+    }
   }
 }
 
