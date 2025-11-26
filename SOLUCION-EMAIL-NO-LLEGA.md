@@ -182,3 +182,8 @@ Asegúrate de que el App Password sea correcto:
 
 **¿Revisaste la carpeta SPAM?** Es la causa más común. 📬
 
+
+
+
+
+
